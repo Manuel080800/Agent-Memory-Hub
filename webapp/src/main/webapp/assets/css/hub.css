@@ -1,0 +1,43 @@
+body {
+    min-height: 100vh;
+}
+
+[v-cloak] {
+    display: none;
+}
+
+.hub-brand,
+.hub-login-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: .75rem;
+    color: inherit;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.hub-brand:hover,
+.hub-login-brand:hover {
+    color: var(--tblr-primary);
+}
+
+.hub-login-brand {
+    font-size: 1.25rem;
+}
+
+.nav-link-icon .icon {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+#hub-app,
+#users-app {
+    min-width: 0;
+}
+
+.content-preview {
+    max-height: 15rem;
+    overflow: auto;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}

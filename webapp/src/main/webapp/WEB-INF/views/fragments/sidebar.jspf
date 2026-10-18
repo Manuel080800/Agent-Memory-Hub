@@ -1,0 +1,32 @@
+<aside class="navbar navbar-vertical navbar-expand-lg" aria-label="<spring:message code='ui.app.navigation' />">
+    <div class="container-fluid">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="<spring:message code='ui.sidebar.toggle' />">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="navbar-brand navbar-brand-autodark">
+            <a class="hub-brand" href="${pageContext.request.contextPath}/dashboard" aria-label="Agent Memory Hub">
+                <span class="avatar avatar-sm bg-blue-lt text-blue fw-bold" aria-hidden="true">AM</span>
+                <span>Agent Memory Hub</span>
+            </a>
+        </div>
+        <div class="collapse navbar-collapse" id="sidebar-menu">
+            <ul class="navbar-nav pt-lg-3">
+                <li class="nav-item">
+                    <a class="nav-link ${activeNavigation eq 'projects' ? 'active' : ''}" href="${pageContext.request.contextPath}/dashboard">
+                        <span class="nav-link-icon"><svg class="icon" aria-hidden="true"><use href="${pageContext.request.contextPath}/assets/vendor/tabler/icons.svg#layout-dashboard"></use></svg></span>
+                        <span class="nav-link-title"><spring:message code='ui.project.mine' /></span>
+                    </a>
+                </li>
+                <c:if test="${isAdmin or activeNavigation eq 'users'}">
+                    <li class="nav-section-title"><spring:message code='ui.admin' /></li>
+                    <li class="nav-item">
+                        <a class="nav-link ${activeNavigation eq 'users' ? 'active' : ''}" href="${pageContext.request.contextPath}/admin/users">
+                            <span class="nav-link-icon"><svg class="icon" aria-hidden="true"><use href="${pageContext.request.contextPath}/assets/vendor/tabler/icons.svg#users"></use></svg></span>
+                            <span class="nav-link-title"><spring:message code='ui.users' /></span>
+                        </a>
+                    </li>
+                </c:if>
+            </ul>
+        </div>
+    </div>
+</aside>

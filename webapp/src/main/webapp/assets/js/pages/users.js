@@ -10,7 +10,9 @@ const messages = {
     userCreated: translations['ui.user.created'],
     userUpdated: translations['ui.user.updated'],
     userDeleteConfirm: translations['ui.user.delete.confirm'],
-    userDeleted: translations['ui.user.deleted']
+    userDeleted: translations['ui.user.deleted'],
+    confirmationTitle: translations['ui.dialog.confirmation.title'],
+    delete: translations['ui.delete']
 };
 const { createApp } = window.Vue;
 
@@ -20,13 +22,38 @@ createApp({
             userList: [],
             createForm: { fullName: '', email: '', password: '', platformRole: 'USER' },
             errorMessage: '',
-            noticeMessage: ''
+            noticeMessage: '',
+            dialogTitle: '',
+            dialogMessage: '',
+            dialogSubmitLabel: '',
+            dialogResolve: null
         };
     },
     mounted() {
+        document.getElementById('users-dialog').addEventListener('hidden.bs.modal', this.cancelDialog);
         this.loadUsers();
     },
     methods: {
+        showConfirmDialog(message) {
+            return new Promise(resolve => {
+                this.dialogTitle = messages.confirmationTitle;
+                this.dialogMessage = message;
+                this.dialogSubmitLabel = messages.delete;
+                this.dialogResolve = resolve;
+                this.$nextTick(() => document.getElementById('users-dialog-trigger').click());
+            });
+        },
+        completeDialog(result) {
+            const resolve = this.dialogResolve;
+            this.dialogResolve = null;
+            if (resolve) resolve(result);
+        },
+        cancelDialog() {
+            this.completeDialog(null);
+        },
+        confirmDialog() {
+            this.completeDialog(true);
+        },
         async request(path, options = {}) {
             const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
             if (options.method && options.method !== 'GET') headers['X-CSRF-Token'] = csrfToken;
@@ -59,7 +86,7 @@ createApp({
             } catch (error) { this.showError(error); }
         },
         async deleteUser(user) {
-            if (!window.confirm(messages.userDeleteConfirm.replace('{0}', user.fullName))) return;
+            if (!await this.showConfirmDialog(messages.userDeleteConfirm.replace('{0}', user.fullName))) return;
             try {
                 await this.request('/users/' + user.id + '?confirm=true', { method: 'DELETE' });
                 this.userList = this.userList.filter(item => item.id !== user.id);

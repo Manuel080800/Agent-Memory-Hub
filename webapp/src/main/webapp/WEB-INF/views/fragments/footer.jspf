@@ -1,0 +1,8 @@
+<footer class="footer footer-transparent d-print-none">
+    <div class="container-xl">
+        <div class="row text-center align-items-center">
+            <div class="col-12 col-lg-auto me-lg-auto"><span class="text-secondary">Agent Memory Hub</span></div>
+            <div class="col-12 col-lg-auto mt-2 mt-lg-0"><a class="link-secondary" href="https://tabler.io" target="_blank" rel="noopener">Tabler UI</a></div>
+        </div>
+    </div>
+</footer>

@@ -1,0 +1,20 @@
+<header class="navbar navbar-expand-md d-print-none">
+    <div class="container-xl">
+        <div class="navbar-brand navbar-brand-autodark">
+            <c:choose>
+                <c:when test="${activeNavigation eq 'users'}"><spring:message code='ui.admin' /></c:when>
+                <c:otherwise><spring:message code='ui.workspaces' /></c:otherwise>
+            </c:choose>
+        </div>
+        <div class="navbar-side ms-auto">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <form method="post" action="${pageContext.request.contextPath}/logout" class="m-0">
+                        <input type="hidden" name="csrfToken" value="${csrfToken}">
+                        <button class="nav-link" type="submit"><spring:message code='ui.logout' /></button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+</header>

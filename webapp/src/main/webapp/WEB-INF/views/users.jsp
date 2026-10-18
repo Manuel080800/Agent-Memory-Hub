@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <!doctype html>
 <html lang="${language}">
 <head>
@@ -7,56 +8,94 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="${csrfToken}">
     <title><spring:message code='ui.users' /> · Agent Memory Hub</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/webjars/bootstrap/5.3.8/css/bootstrap.min.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/vendor/tabler/css/tabler.min.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/hub.css">
 </head>
-<body class="bg-body-tertiary">
-<nav class="navbar navbar-dark" style="background:#10213d">
-    <div class="container-fluid px-lg-5">
-        <a class="navbar-brand fw-semibold" href="${pageContext.request.contextPath}/dashboard">Agent Memory Hub</a>
-        <form method="post" action="${pageContext.request.contextPath}/logout" class="m-0">
-            <input type="hidden" name="csrfToken" value="${csrfToken}">
-            <button class="btn btn-outline-light btn-sm" type="submit"><spring:message code='ui.logout' /></button>
-        </form>
-    </div>
-</nav>
-<main id="users-app" class="container-fluid px-lg-5 py-4" data-context-path="${pageContext.request.contextPath}">
-    <div class="d-flex justify-content-between align-items-end mb-4">
-        <div><p class="text-primary fw-semibold mb-1"><spring:message code='ui.admin' /></p><h1 class="h2 mb-0"><spring:message code='ui.users' /></h1></div>
-        <a class="btn btn-outline-secondary" href="${pageContext.request.contextPath}/dashboard"><spring:message code='ui.users.back' /></a>
-    </div>
-    <div v-if="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
-    <div v-if="noticeMessage" class="alert alert-success">{{ noticeMessage }}</div>
-    <section class="card border-0 shadow-sm mb-4">
-        <div class="card-body">
-            <h2 class="h5"><spring:message code='ui.user.create' /></h2>
-            <form class="row g-3" @submit.prevent="createUser">
-                <div class="col-lg-3"><label class="form-label" for="full-name"><spring:message code='ui.user.fullName' /></label><input id="full-name" v-model="createForm.fullName" class="form-control" required></div>
-                <div class="col-lg-3"><label class="form-label" for="user-email"><spring:message code='ui.user.email' /></label><input id="user-email" v-model="createForm.email" class="form-control" type="email" required></div>
-                <div class="col-lg-3"><label class="form-label" for="user-password"><spring:message code='ui.user.initialPassword' /></label><input id="user-password" v-model="createForm.password" class="form-control" type="password" minlength="12" required></div>
-                <div class="col-lg-2"><label class="form-label" for="user-role"><spring:message code='ui.role' /></label><select id="user-role" v-model="createForm.platformRole" class="form-select"><option value="USER"><spring:message code='ui.role.user' /></option><option value="ADMIN"><spring:message code='ui.role.admin' /></option></select></div>
-                <div class="col-lg-1 d-flex align-items-end"><button class="btn btn-primary w-100" type="submit"><spring:message code='ui.create' /></button></div>
-            </form>
+<body>
+<a class="visually-hidden-focusable skip-link" href="#main-content"><spring:message code='ui.skip.main' /></a>
+<div class="page">
+    <%@ include file="fragments/sidebar.jspf" %>
+    <div class="page-wrapper">
+        <%@ include file="fragments/topbar.jspf" %>
+        <div id="users-app" v-cloak data-context-path="${pageContext.request.contextPath}">
+                <div class="page-header d-print-none mb-4">
+                    <div class="container-xl">
+                    <div class="row align-items-center g-2">
+                        <div class="col">
+                            <div class="page-pretitle"><spring:message code='ui.admin' /></div>
+                            <h1 class="page-title"><spring:message code='ui.users' /></h1>
+                        </div>
+                        <div class="col-auto ms-auto d-print-none">
+                            <a class="btn btn-outline-secondary" href="${pageContext.request.contextPath}/dashboard"><spring:message code='ui.users.back' /></a>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+                <main id="main-content" class="page-body">
+                <div class="container-xl">
+                <div v-if="errorMessage" class="alert alert-important alert-danger alert-dismissible" role="alert">
+                    <div class="alert-icon"><svg class="icon alert-icon" aria-hidden="true"><use href="${pageContext.request.contextPath}/assets/vendor/tabler/icons.svg#alert-circle"></use></svg></div>
+                    <div>{{ errorMessage }}</div>
+                    <button type="button" class="btn-close" aria-label="<spring:message code='ui.alert.dismiss' />" @click="errorMessage = ''"></button>
+                </div>
+                <div v-if="noticeMessage" class="alert alert-important alert-success alert-dismissible" role="status" aria-live="polite">
+                    <div class="alert-icon"><svg class="icon alert-icon" aria-hidden="true"><use href="${pageContext.request.contextPath}/assets/vendor/tabler/icons.svg#circle-check"></use></svg></div>
+                    <div>{{ noticeMessage }}</div>
+                    <button type="button" class="btn-close" aria-label="<spring:message code='ui.alert.dismiss' />" @click="noticeMessage = ''"></button>
+                </div>
+                <section class="card users-create-card mb-4">
+                    <div class="card-header"><h2 class="card-title mb-0"><spring:message code='ui.user.create' /></h2></div>
+                    <div class="card-body">
+                        <form class="row g-3" @submit.prevent="createUser">
+                            <div class="col-lg-3"><label class="form-label" for="full-name"><spring:message code='ui.user.fullName' /></label><input id="full-name" v-model="createForm.fullName" class="form-control" required></div>
+                            <div class="col-lg-3"><label class="form-label" for="user-email"><spring:message code='ui.user.email' /></label><input id="user-email" v-model="createForm.email" class="form-control" type="email" required></div>
+                            <div class="col-lg-3"><label class="form-label" for="user-password"><spring:message code='ui.user.initialPassword' /></label><input id="user-password" v-model="createForm.password" class="form-control" type="password" minlength="12" required></div>
+                            <div class="col-lg-2"><label class="form-label" for="user-role"><spring:message code='ui.role' /></label><select id="user-role" v-model="createForm.platformRole" class="form-select"><option value="USER"><spring:message code='ui.role.user' /></option><option value="ADMIN"><spring:message code='ui.role.admin' /></option></select></div>
+                            <div class="col-lg-1 d-flex align-items-end"><button class="btn btn-primary w-100" type="submit"><spring:message code='ui.create' /></button></div>
+                        </form>
+                    </div>
+                </section>
+                <section class="card users-table-card">
+                    <div class="card-header"><h2 class="card-title mb-0"><spring:message code='ui.user.accounts' /></h2></div>
+                    <div class="table-responsive">
+                        <table class="table table-vcenter card-table">
+                            <thead><tr><th><spring:message code='ui.name' /></th><th><spring:message code='ui.user.email' /></th><th><spring:message code='ui.role' /></th><th><spring:message code='ui.status' /></th><th></th></tr></thead>
+                            <tbody>
+                                <tr v-for="user in userList" :key="user.id">
+                                    <td><input v-model="user.fullName" class="form-control form-control-sm"></td>
+                                    <td><input v-model="user.email" class="form-control form-control-sm" type="email"></td>
+                                    <td><select v-model="user.platformRole" class="form-select form-select-sm"><option value="USER"><spring:message code='ui.role.user' /></option><option value="ADMIN"><spring:message code='ui.role.admin' /></option></select></td>
+                                    <td><select v-model="user.enabled" class="form-select form-select-sm"><option :value="true"><spring:message code='ui.active' /></option><option :value="false"><spring:message code='ui.user.disabled' /></option></select></td>
+                                    <td class="text-end text-nowrap"><button class="btn btn-sm btn-primary me-2" type="button" @click="saveUser(user)"><spring:message code='ui.save' /></button><button class="btn btn-sm btn-outline-danger" type="button" @click="deleteUser(user)"><spring:message code='ui.delete' /></button></td>
+                                </tr>
+                                <tr v-if="userList.length === 0"><td colspan="5" class="text-center text-body-secondary py-4"><spring:message code='ui.users.empty' /></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                </div>
+            </main>
+            <button id="users-dialog-trigger" class="d-none" type="button" data-bs-toggle="modal" data-bs-target="#users-dialog" tabindex="-1" aria-hidden="true"></button>
+            <div id="users-dialog" class="modal modal-blur fade" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">{{ dialogTitle }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<spring:message code='ui.dialog.close' />" @click="cancelDialog"></button>
+                        </div>
+                        <div class="modal-body">{{ dialogMessage }}</div>
+                        <div class="modal-footer">
+                            <button class="btn btn-link link-secondary" type="button" data-bs-dismiss="modal" @click="cancelDialog"><spring:message code='ui.cancel' /></button>
+                            <button class="btn btn-danger" type="button" data-bs-dismiss="modal" @click="confirmDialog">{{ dialogSubmitLabel }}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-    </section>
-    <section class="card border-0 shadow-sm">
-        <div class="card-header bg-white py-3"><h2 class="h5 mb-0"><spring:message code='ui.user.accounts' /></h2></div>
-        <div class="table-responsive">
-            <table class="table align-middle mb-0">
-                <thead><tr><th><spring:message code='ui.name' /></th><th><spring:message code='ui.user.email' /></th><th><spring:message code='ui.role' /></th><th><spring:message code='ui.status' /></th><th></th></tr></thead>
-                <tbody>
-                    <tr v-for="user in userList" :key="user.id">
-                        <td><input v-model="user.fullName" class="form-control form-control-sm"></td>
-                        <td><input v-model="user.email" class="form-control form-control-sm" type="email"></td>
-                        <td><select v-model="user.platformRole" class="form-select form-select-sm"><option value="USER"><spring:message code='ui.role.user' /></option><option value="ADMIN"><spring:message code='ui.role.admin' /></option></select></td>
-                        <td><select v-model="user.enabled" class="form-select form-select-sm"><option :value="true"><spring:message code='ui.active' /></option><option :value="false"><spring:message code='ui.user.disabled' /></option></select></td>
-                        <td class="text-end text-nowrap"><button class="btn btn-sm btn-primary me-2" type="button" @click="saveUser(user)"><spring:message code='ui.save' /></button><button class="btn btn-sm btn-outline-danger" type="button" @click="deleteUser(user)"><spring:message code='ui.delete' /></button></td>
-                    </tr>
-                    <tr v-if="userList.length === 0"><td colspan="5" class="text-center text-body-secondary py-4"><spring:message code='ui.users.empty' /></td></tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
-</main>
+        <%@ include file="fragments/footer.jspf" %>
+    </div>
+</div>
+<script src="${pageContext.request.contextPath}/assets/vendor/tabler/js/tabler.min.js"></script>
 <script src="${pageContext.request.contextPath}/webjars/vue/3.5.22/dist/vue.global.prod.js"></script>
 <script type="module" src="${pageContext.request.contextPath}/assets/js/pages/users.js"></script>
 </body>

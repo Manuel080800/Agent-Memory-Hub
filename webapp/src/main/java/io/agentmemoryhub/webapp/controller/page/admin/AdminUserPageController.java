@@ -27,6 +27,7 @@ public class AdminUserPageController {
         }
 
         model.addAttribute("csrfToken", webAppSessionHandler.getOrCreateCsrfToken(httpSession));
+        model.addAttribute("activeNavigation", "users");
         return "users";
     }
 }

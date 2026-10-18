@@ -30,12 +30,14 @@ const messages = {
     descriptionEmpty: translations['ui.description.empty'],
     projectCreated: translations['ui.project.created'],
     projectUpdated: translations['ui.project.updated'],
+    projectEditTitle: translations['ui.project.edit.title'],
     projectDeleteConfirm: translations['ui.project.delete.confirm'],
     projectDeleted: translations['ui.project.deleted'],
     projectNamePrompt: translations['ui.project.name.prompt'],
     projectDescriptionPrompt: translations['ui.project.description.prompt'],
     profileCreated: translations['ui.profile.created'],
     profileUpdated: translations['ui.profile.updated'],
+    profileEditTitle: translations['ui.profile.edit.title'],
     profileDeleted: translations['ui.profile.deleted'],
     profileDeleteConfirm: translations['ui.profile.delete.confirm'],
     profileNamePrompt: translations['ui.profile.name.prompt'],
@@ -43,6 +45,11 @@ const messages = {
     settingsSaved: translations['ui.settings.saved'],
     settingsResetConfirm: translations['ui.settings.reset.confirm'],
     settingsReset: translations['ui.settings.reset'],
+    confirmationTitle: translations['ui.dialog.confirmation.title'],
+    requiredFields: translations['ui.dialog.required'],
+    confirm: translations['ui.confirm'],
+    delete: translations['ui.delete'],
+    save: translations['ui.save'],
     memberAdded: translations['ui.member.added'],
     memberRoleUpdated: translations['ui.member.roleUpdated'],
     memberRemoveConfirm: translations['ui.member.remove.confirm'],
@@ -52,11 +59,13 @@ const messages = {
     connectionTasksName: translations['ui.connection.tasksName'],
     connectionUpdated: translations['ui.connection.updated'],
     resourceCreated: translations['ui.resource.created'],
+    resourceEditTitle: translations['ui.resource.edit.title'],
     resourceNamePrompt: translations['ui.resource.name.prompt'],
     resourceUpdated: translations['ui.resource.updated'],
     resourceDeleteConfirm: translations['ui.resource.delete.confirm'],
     resourceDeleted: translations['ui.resource.deleted'],
     proposalContentPrompt: translations['ui.proposal.content.prompt'],
+    proposalEditTitle: translations['ui.proposal.edit.title'],
     proposalReasonPrompt: translations['ui.proposal.reason.prompt'],
     proposalUpdated: translations['ui.proposal.updated'],
     proposalDeleteConfirm: translations['ui.proposal.delete.confirm'],
@@ -67,6 +76,7 @@ const messages = {
     blockDeleteConfirm: translations['ui.block.delete.confirm'],
     blockDeleted: translations['ui.block.deleted'],
     memoryTitlePrompt: translations['ui.memory.title.prompt'],
+    proposalApproveTitle: translations['ui.proposal.approve.title'],
     memoryFromTask: translations['ui.memory.fromTask'],
     proposalApproved: translations['ui.proposal.approved'],
     resourceSkill: translations['ui.resource.skill'],
@@ -96,6 +106,7 @@ createApp({
             platformRole,
             currentProjectRole: null,
             selectedProject: null,
+            activeWorkspaceSection: 'overview',
             activeProfile: null,
             activeProfileId: '',
             activeResourceType: 'SKILL',
@@ -108,18 +119,81 @@ createApp({
             showCreateProfile: false,
             showCreateResource: false,
             errorMessage: '',
-            noticeMessage: ''
+            noticeMessage: '',
+            dialogMode: '',
+            dialogTitle: '',
+            dialogMessage: '',
+            dialogFields: [],
+            dialogValues: {},
+            dialogSubmitLabel: '',
+            dialogDanger: false,
+            dialogError: '',
+            dialogResolve: null
         };
     },
     mounted() {
+        document.getElementById('hub-dialog').addEventListener('hidden.bs.modal', this.cancelDialog);
         this.loadProjects();
     },
     computed: {
         canEditProject() {
             return this.currentProjectRole === 'OWNER' || this.currentProjectRole === 'EDITOR';
+        },
+        enabledConnectionCount() {
+            return this.connectionList.filter(connection => connection.enabled).length;
+        },
+        isResourceSection() {
+            return this.resourceTypeList.includes(this.activeWorkspaceSection);
         }
     },
     methods: {
+        showFormDialog(title, fields) {
+            return new Promise(resolve => {
+                this.dialogMode = 'form';
+                this.dialogTitle = title;
+                this.dialogMessage = '';
+                this.dialogFields = fields;
+                this.dialogValues = Object.fromEntries(fields.map(field => [field.key, field.value || '']));
+                this.dialogSubmitLabel = messages.save;
+                this.dialogDanger = false;
+                this.dialogError = '';
+                this.dialogResolve = resolve;
+                this.$nextTick(() => document.getElementById('hub-dialog-trigger').click());
+            });
+        },
+        showConfirmDialog(message, danger = false) {
+            return new Promise(resolve => {
+                this.dialogMode = 'confirm';
+                this.dialogTitle = messages.confirmationTitle;
+                this.dialogMessage = message;
+                this.dialogFields = [];
+                this.dialogValues = {};
+                this.dialogSubmitLabel = danger ? messages.delete : messages.confirm;
+                this.dialogDanger = danger;
+                this.dialogError = '';
+                this.dialogResolve = resolve;
+                this.$nextTick(() => document.getElementById('hub-dialog-trigger').click());
+            });
+        },
+        completeDialog(result) {
+            const resolve = this.dialogResolve;
+            this.dialogResolve = null;
+            if (resolve) resolve(result);
+        },
+        cancelDialog() {
+            this.completeDialog(null);
+        },
+        confirmDialog() {
+            this.completeDialog(true);
+        },
+        submitDialog() {
+            if (this.dialogFields.some(field => field.required && !String(this.dialogValues[field.key] || '').trim())) {
+                this.dialogError = messages.requiredFields;
+                return;
+            }
+            this.completeDialog({ ...this.dialogValues });
+            document.getElementById('hub-dialog-close').click();
+        },
         async request(path, options = {}) {
             const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
             if (options.method && options.method !== 'GET') headers['X-CSRF-Token'] = csrfToken;
@@ -147,6 +221,9 @@ createApp({
                     this.request('/projects/' + projectId + '/mcp-connections')
                 ]);
                 this.selectedProject = project;
+                this.activeWorkspaceSection = 'overview';
+                this.showCreateProfile = false;
+                this.showCreateResource = false;
                 this.profileList = profilePage.items || [];
                 this.settingsRecord = settingsRecord;
                 this.settingsForm = { ...settingsRecord };
@@ -156,7 +233,10 @@ createApp({
                 this.activeProfileId = this.profileList.some(profile => profile.id === project.activeProfileId) ? project.activeProfileId : '';
                 this.activeProfile = this.profileList.find(profile => profile.id === this.activeProfileId) || null;
                 this.resourceList = [];
-                if (this.activeProfileId) await this.loadResources(this.activeResourceType);
+                this.proposalList = [];
+                this.proposalTaskId = null;
+                this.blockList = [];
+                this.blockTaskId = null;
             } catch (error) { this.showError(error); }
         },
         async createProject() {
@@ -169,22 +249,23 @@ createApp({
             } catch (error) { this.showError(error); }
         },
         async editProject() {
-            const name = window.prompt(messages.projectNamePrompt, this.selectedProject.name);
-            if (name === null || !name.trim()) return;
-            const description = window.prompt(messages.projectDescriptionPrompt, this.selectedProject.description || '');
-            if (description === null) return;
+            const values = await this.showFormDialog(messages.projectEditTitle, [
+                { key: 'name', label: messages.projectNamePrompt, value: this.selectedProject.name, required: true },
+                { key: 'description', label: messages.projectDescriptionPrompt, value: this.selectedProject.description || '', required: false }
+            ]);
+            if (!values) return;
             try {
                 const projectPath = '/projects/' + this.selectedProject.id;
                 this.selectedProject = await this.request(projectPath, {
                     method: 'PUT',
-                    body: JSON.stringify({ name: name.trim(), description, enabled: this.selectedProject.enabled })
+                    body: JSON.stringify({ name: values.name.trim(), description: values.description, enabled: this.selectedProject.enabled })
                 });
                 await this.loadProjects();
                 this.noticeMessage = messages.projectUpdated;
             } catch (error) { this.showError(error); }
         },
         async deleteProject() {
-            if (!window.confirm(messages.projectDeleteConfirm)) return;
+            if (!await this.showConfirmDialog(messages.projectDeleteConfirm, true)) return;
             try {
                 await this.request('/projects/' + this.selectedProject.id + '?confirm=true', { method: 'DELETE' });
                 this.projectList = this.projectList.filter(project => project.id !== this.selectedProject.id);
@@ -205,28 +286,30 @@ createApp({
         },
         async editProfile() {
             const profile = this.activeProfile;
-            const name = window.prompt(messages.profileNamePrompt, profile.name);
-            if (name === null || !name.trim()) return;
-            const description = window.prompt(messages.profileDescriptionPrompt, profile.description || '');
-            if (description === null) return;
+            const values = await this.showFormDialog(messages.profileEditTitle, [
+                { key: 'name', label: messages.profileNamePrompt, value: profile.name, required: true },
+                { key: 'description', label: messages.profileDescriptionPrompt, value: profile.description || '', required: false }
+            ]);
+            if (!values) return;
             try {
                 const profilePath = '/projects/' + this.selectedProject.id + '/profiles/' + profile.id;
                 this.activeProfile = await this.request(profilePath, {
                     method: 'PUT',
-                    body: JSON.stringify({ name: name.trim(), description, enabled: profile.enabled })
+                    body: JSON.stringify({ name: values.name.trim(), description: values.description, enabled: profile.enabled })
                 });
                 Object.assign(profile, this.activeProfile);
                 this.noticeMessage = messages.profileUpdated;
             } catch (error) { this.showError(error); }
         },
         async deleteProfile() {
-            if (!window.confirm(messages.profileDeleteConfirm)) return;
+            if (!await this.showConfirmDialog(messages.profileDeleteConfirm, true)) return;
             try {
                 await this.request('/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '?confirm=true', { method: 'DELETE' });
                 this.profileList = this.profileList.filter(profile => profile.id !== this.activeProfileId);
                 this.activeProfile = null;
                 this.activeProfileId = '';
                 this.resourceList = [];
+                this.activeWorkspaceSection = 'profiles';
                 this.noticeMessage = messages.profileDeleted;
             } catch (error) { this.showError(error); }
         },
@@ -235,8 +318,19 @@ createApp({
             try {
                 this.activeProfile = await this.request('/projects/' + this.selectedProject.id + '/active-profile/' + this.activeProfileId, { method: 'PUT' });
                 this.selectedProject.activeProfileId = this.activeProfileId;
-                await this.loadResources(this.activeResourceType);
+                this.resourceList = [];
+                if (this.isResourceSection) await this.loadResources(this.activeWorkspaceSection);
             } catch (error) { this.showError(error); }
+        },
+        async selectWorkspaceSection(section) {
+            this.clearMessages();
+            this.activeWorkspaceSection = section;
+            this.showCreateResource = false;
+            if (this.resourceTypeList.includes(section)) {
+                this.resourceList = [];
+                this.activeResourceType = section;
+                await this.loadResources(section);
+            }
         },
         async saveSettings() {
             try {
@@ -246,7 +340,7 @@ createApp({
             } catch (error) { this.showError(error); }
         },
         async resetSettings() {
-            if (!window.confirm(messages.settingsResetConfirm)) return;
+            if (!await this.showConfirmDialog(messages.settingsResetConfirm)) return;
             try {
                 this.settingsRecord = await this.request('/projects/' + this.selectedProject.id + '/settings/reset', { method: 'POST' });
                 this.settingsForm = { ...this.settingsRecord };
@@ -286,7 +380,7 @@ createApp({
             } catch (error) { this.showError(error); }
         },
         async removeMember(member) {
-            if (!window.confirm(messages.memberRemoveConfirm.replace('{0}', member.fullName))) return;
+            if (!await this.showConfirmDialog(messages.memberRemoveConfirm.replace('{0}', member.fullName), true)) return;
             try {
                 await this.request('/projects/' + this.selectedProject.id + '/members/' + member.userId + '?confirm=true', { method: 'DELETE' });
                 this.memberList = this.memberList.filter(item => item.userId !== member.userId);
@@ -344,14 +438,14 @@ createApp({
         async editResource(resource) {
             const resourceType = this.activeResourceType;
             const currentName = resource.name || resource.title;
-            const updatedName = window.prompt(messages.resourceNamePrompt, currentName);
-            if (updatedName === null || !updatedName.trim()) return;
             const contentPrompt = resourceType === 'MEMORY' ? messages.content : resourceType === 'TASK' ? messages.objective : messages.instructions;
             const currentContent = resource.content || resource.instructions || resource.description || '';
-            const updatedContent = window.prompt(contentPrompt, currentContent);
-            if (updatedContent === null) return;
-            if ((resourceType === 'MEMORY' || resourceType === 'TASK') && !updatedContent.trim()) return;
-            const body = this.updatedResourceBody(resource, updatedName.trim(), updatedContent);
+            const values = await this.showFormDialog(messages.resourceEditTitle, [
+                { key: 'name', label: messages.resourceNamePrompt, value: currentName, required: true },
+                { key: 'content', label: contentPrompt, value: currentContent, multiline: true, required: resourceType === 'MEMORY' || resourceType === 'TASK' }
+            ]);
+            if (!values) return;
+            const body = this.updatedResourceBody(resource, values.name.trim(), values.content);
             try {
                 const resourcePath = '/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '/' + resourcePathByType[resourceType] + '/' + resource.id;
                 const updatedResource = await this.request(resourcePath, { method: 'PUT', body: JSON.stringify(body) });
@@ -372,7 +466,7 @@ createApp({
             return { title: updatedName, description: updatedContent, summary: resource.summary || '' };
         },
         async deleteResource(resource) {
-            if (!window.confirm(messages.resourceDeleteConfirm)) return;
+            if (!await this.showConfirmDialog(messages.resourceDeleteConfirm, true)) return;
             try {
                 const resourceId = resource.id;
                 await this.request('/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '/' + resourcePathByType[this.activeResourceType] + '/' + resourceId, { method: 'DELETE' });
@@ -388,22 +482,23 @@ createApp({
             } catch (error) { this.showError(error); }
         },
         async editProposal(task, proposal) {
-            const proposedContent = window.prompt(messages.proposalContentPrompt, proposal.proposedContent);
-            if (proposedContent === null || !proposedContent.trim()) return;
-            const reason = window.prompt(messages.proposalReasonPrompt, proposal.reason);
-            if (reason === null || !reason.trim()) return;
+            const values = await this.showFormDialog(messages.proposalEditTitle, [
+                { key: 'proposedContent', label: messages.proposalContentPrompt, value: proposal.proposedContent, multiline: true, required: true },
+                { key: 'reason', label: messages.proposalReasonPrompt, value: proposal.reason, required: true }
+            ]);
+            if (!values) return;
             try {
                 const proposalPath = '/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '/tasks/' + task.id + '/proposals/' + proposal.id;
                 const updatedProposal = await this.request(proposalPath, {
                     method: 'PUT',
-                    body: JSON.stringify({ proposedContent, reason, tags: proposal.tags || [] })
+                    body: JSON.stringify({ proposedContent: values.proposedContent, reason: values.reason, tags: proposal.tags || [] })
                 });
                 Object.assign(proposal, updatedProposal);
                 this.noticeMessage = messages.proposalUpdated;
             } catch (error) { this.showError(error); }
         },
         async deleteProposal(task, proposal) {
-            if (!window.confirm(messages.proposalDeleteConfirm)) return;
+            if (!await this.showConfirmDialog(messages.proposalDeleteConfirm, true)) return;
             try {
                 const proposalPath = '/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '/tasks/' + task.id + '/proposals/' + proposal.id + '?confirm=true';
                 await this.request(proposalPath, { method: 'DELETE' });
@@ -430,17 +525,19 @@ createApp({
             } catch (error) { this.showError(error); }
         },
         async editTaskBlock(task, block) {
-            const content = window.prompt(messages.blockContentPrompt, block.content);
-            if (content === null || !content.trim()) return;
+            const values = await this.showFormDialog(messages.blockContentPrompt, [
+                { key: 'content', label: messages.blockContentPrompt, value: block.content, multiline: true, required: true }
+            ]);
+            if (!values) return;
             try {
                 const path = '/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '/tasks/' + task.id + '/blocks/' + block.id;
-                const updatedBlock = await this.request(path, { method: 'PUT', body: JSON.stringify({ content }) });
+                const updatedBlock = await this.request(path, { method: 'PUT', body: JSON.stringify({ content: values.content }) });
                 Object.assign(block, updatedBlock);
                 this.noticeMessage = messages.blockUpdated;
             } catch (error) { this.showError(error); }
         },
         async deleteTaskBlock(task, block) {
-            if (!window.confirm(messages.blockDeleteConfirm)) return;
+            if (!await this.showConfirmDialog(messages.blockDeleteConfirm, true)) return;
             try {
                 const path = '/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '/tasks/' + task.id + '/blocks/' + block.id + '?confirm=true';
                 await this.request(path, { method: 'DELETE' });
@@ -449,12 +546,14 @@ createApp({
             } catch (error) { this.showError(error); }
         },
         async approveProposal(task, proposal) {
-            const title = window.prompt(messages.memoryTitlePrompt, proposal.title || messages.memoryFromTask);
-            if (!title) return;
+            const values = await this.showFormDialog(messages.proposalApproveTitle, [
+                { key: 'title', label: messages.memoryTitlePrompt, value: proposal.title || messages.memoryFromTask, required: true }
+            ]);
+            if (!values) return;
             try {
                 await this.request('/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '/tasks/' + task.id + '/proposals/' + proposal.id + '/approve', {
                     method: 'POST',
-                    body: JSON.stringify({ title, content: proposal.proposedContent, tags: proposal.tags || [], applicationMode: 'CONTEXTUAL' })
+                    body: JSON.stringify({ title: values.title.trim(), content: proposal.proposedContent, tags: proposal.tags || [], applicationMode: 'CONTEXTUAL' })
                 });
                 this.proposalList = this.proposalList.filter(item => item.id !== proposal.id);
                 this.noticeMessage = messages.proposalApproved;
