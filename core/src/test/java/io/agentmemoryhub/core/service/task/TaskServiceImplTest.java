@@ -32,7 +32,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class TaskServiceImplTest {
+public class TaskServiceImplTest {
     @Mock
     private TaskRepository taskRepository;
 

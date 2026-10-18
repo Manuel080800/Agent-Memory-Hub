@@ -28,7 +28,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class ContextServiceImplTest {
+public class ContextServiceImplTest {
     @Mock
     private ProjectRepository projectRepository;
 

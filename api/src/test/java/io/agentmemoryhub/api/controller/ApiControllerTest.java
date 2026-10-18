@@ -52,7 +52,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletRequest;
 
 @ExtendWith(MockitoExtension.class)
-class ApiControllerTest {
+public class ApiControllerTest {
     @Mock
     private AuthenticationService authenticationService;
 

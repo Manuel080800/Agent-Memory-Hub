@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class CollectionUtilsTest {
+public class CollectionUtilsTest {
 
     @Test
     void createsAnImmutableOrderedMapFromKeyValuePairs() {

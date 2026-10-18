@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.context.support.StaticMessageSource;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 
-class ApiErrorAdviceTest {
+public class ApiErrorAdviceTest {
     @Test
     void mapsHubErrorsToLocalizedResponsesAndPreservesDetails() {
         // Verifies domain error status, message arguments, and detail entries are returned to API clients.

@@ -6,7 +6,7 @@ import java.util.Locale;
 import org.junit.jupiter.api.Test;
 import org.springframework.ui.ExtendedModelMap;
 
-class WebAppLocaleAdviceTest {
+public class WebAppLocaleAdviceTest {
     @Test
     void addsTheResolvedLanguageCodeToTheViewModel() {
         // Verifies templates receive the locale language selected for the current request.

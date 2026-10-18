@@ -27,7 +27,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class MemoryServiceImplTest {
+public class MemoryServiceImplTest {
     @Mock
     private MemoryRepository memoryRepository;
 

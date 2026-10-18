@@ -9,7 +9,7 @@ import java.util.Locale;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.StaticMessageSource;
 
-class WebAppErrorAdviceTest {
+public class WebAppErrorAdviceTest {
     @Test
     void returnsLocalizedDomainErrorsWithTheirHttpStatusAndDetails() {
         // Verifies domain failures preserve their status, translated message, and detail list.

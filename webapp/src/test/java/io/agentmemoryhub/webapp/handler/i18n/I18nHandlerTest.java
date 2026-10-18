@@ -7,7 +7,7 @@ import java.util.Locale;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 
-class I18nHandlerTest {
+public class I18nHandlerTest {
     @Test
     void combinesCommonAndModuleMessagesUsingTheSelectedLocale() {
         // Verifies common and module messages are loaded from the Spanish bundle for the resolved locale.

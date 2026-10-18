@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-class PasswordHashServiceImplTest {
+public class PasswordHashServiceImplTest {
     private final PasswordHashServiceImpl passwordHashService = new PasswordHashServiceImpl();
 
     @Test

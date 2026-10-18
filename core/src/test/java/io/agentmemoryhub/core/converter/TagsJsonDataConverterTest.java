@@ -8,7 +8,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class TagsJsonDataConverterTest {
+public class TagsJsonDataConverterTest {
     private final TagsJsonDataConverter converter = new TagsJsonDataConverter(new ObjectMapper());
 
     @Test

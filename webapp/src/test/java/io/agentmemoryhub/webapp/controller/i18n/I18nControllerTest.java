@@ -12,7 +12,7 @@ import org.springframework.context.support.ReloadableResourceBundleMessageSource
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 
-class I18nControllerTest {
+public class I18nControllerTest {
     @Test
     void returnsLocalizedMessagesForTheRequestedModule() throws Exception {
         // Verifies the HTTP endpoint returns common and module translations in the request locale.

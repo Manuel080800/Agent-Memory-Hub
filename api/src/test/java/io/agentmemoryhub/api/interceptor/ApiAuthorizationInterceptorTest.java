@@ -22,7 +22,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 @ExtendWith(MockitoExtension.class)
-class ApiAuthorizationInterceptorTest {
+public class ApiAuthorizationInterceptorTest {
     @Mock
     private AuthenticationService authenticationService;
 

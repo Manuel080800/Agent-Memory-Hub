@@ -17,7 +17,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.ui.ExtendedModelMap;
 
-class AuthenticationControllerTest {
+public class AuthenticationControllerTest {
     @Test
     void logsInOnlyWithAValidCsrfTokenAndStoresTheAuthenticatedUser() {
         // Verifies valid CSRF login authenticates and stores the user in the existing session.

@@ -23,7 +23,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
 
 @ExtendWith(MockitoExtension.class)
-class WebAppAuthorizationInterceptorTest {
+public class WebAppAuthorizationInterceptorTest {
     @Mock
     private ProjectMemberDAO projectMemberDAO;
 

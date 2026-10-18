@@ -11,7 +11,7 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpSession;
 
-class WebAppSessionHandlerTest {
+public class WebAppSessionHandlerTest {
     private final WebAppSessionHandler sessionHandler = new WebAppSessionHandler();
 
     @Test

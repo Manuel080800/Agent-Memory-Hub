@@ -24,7 +24,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @Testcontainers(disabledWithoutDocker = true)
-class PostgreSqlDaoIntegrationTest {
+public class PostgreSqlDaoIntegrationTest {
     private static final String USER_ID = "user-1";
     private static final String PROJECT_ID = "project-1";
     private static final String PROFILE_ID = "profile-1";

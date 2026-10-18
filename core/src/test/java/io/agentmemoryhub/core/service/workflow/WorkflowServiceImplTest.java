@@ -23,7 +23,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class WorkflowServiceImplTest {
+public class WorkflowServiceImplTest {
     @Mock
     private WorkflowRepository workflowRepository;
 

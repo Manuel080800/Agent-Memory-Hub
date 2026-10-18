@@ -55,7 +55,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpSession;
 
 @ExtendWith(MockitoExtension.class)
-class WebAppControllerTest {
+public class WebAppControllerTest {
     @Mock
     private ProjectService projectService;
 

@@ -21,7 +21,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.StaticMessageSource;
 
-class McpProtocolServiceImplTest {
+public class McpProtocolServiceImplTest {
 
     private McpToolRegistry mcpToolRegistry;
     private McpProtocolServiceImpl mcpProtocolService;

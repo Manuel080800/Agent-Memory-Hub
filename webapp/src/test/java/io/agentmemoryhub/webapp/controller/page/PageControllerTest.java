@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.ui.ExtendedModelMap;
 
-class PageControllerTest {
+public class PageControllerTest {
     private final WebAppSessionHandler sessionHandler = new WebAppSessionHandler();
 
     @Test

@@ -33,7 +33,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.StaticMessageSource;
 
-class McpToolRegistryImplTest {
+public class McpToolRegistryImplTest {
 
     private ContextService contextService;
     private ProjectService projectService;

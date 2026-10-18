@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.Locale;
 import org.junit.jupiter.api.Test;
 
-class ApiMessageConfigurationTest {
+public class ApiMessageConfigurationTest {
     @Test
     void providesSpanishMessagesAndFallsBackToEnglishForOtherLocales() {
         // Verifies the API supports Spanish and defaults unsupported locales to English messages.
