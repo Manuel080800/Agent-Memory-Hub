@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="https://jakarta.ee/xml/ns/persistence" version="3.2">
+    <persistence-unit name="agentMemoryHubWebAppPU" transaction-type="JTA">
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+        <jta-data-source>java:/jdbc/AgentMemoryHubDS</jta-data-source>
+        <class>io.agentmemoryhub.core.model.domain.User</class>
+        <class>io.agentmemoryhub.core.model.domain.Project</class>
+        <class>io.agentmemoryhub.core.model.domain.Profile</class>
+        <class>io.agentmemoryhub.core.model.domain.Skill</class>
+        <class>io.agentmemoryhub.core.model.domain.Workflow</class>
+        <class>io.agentmemoryhub.core.model.domain.Memory</class>
+        <class>io.agentmemoryhub.core.model.domain.Task</class>
+        <class>io.agentmemoryhub.core.model.domain.TaskBlock</class>
+        <class>io.agentmemoryhub.core.model.domain.MemoryProposal</class>
+        <class>io.agentmemoryhub.core.model.domain.McpConnection</class>
+        <class>io.agentmemoryhub.core.model.domain.ProjectSettings</class>
+        <exclude-unlisted-classes>true</exclude-unlisted-classes>
+        <properties>
+            <property name="jboss.entity.manager.factory.jndi.name" value="java:jboss/agentMemoryHub/WebAppEntityManagerFactory"/>
+            <property name="hibernate.hbm2ddl.auto" value="none"/>
+            <property name="hibernate.transaction.coordinator_class" value="jta"/>
+            <property name="hibernate.transaction.jta.platform" value="org.hibernate.engine.transaction.jta.platform.internal.JBossAppServerJtaPlatform"/>
+        </properties>
+    </persistence-unit>
+</persistence>

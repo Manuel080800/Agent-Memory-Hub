@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:18.6-alpine
+    restart: unless-stopped
+    env_file:
+      - ./config-local/runtime.env
+    volumes:
+      - agent-memory-hub-postgres-data:/var/lib/postgresql
+    networks:
+      - agent-memory-hub-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  wildfly:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./config-local/runtime.env
+    volumes:
+      - ./config-local/tls:/run/amh/tls:ro
+    ports:
+      - "127.0.0.1:8443:8443"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agent-memory-hub-internal
+      - agent-memory-hub-host
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/jboss/wildfly/bin/jboss-cli.sh --connect --commands=':read-attribute(name=server-state)' 2>/dev/null | grep -q running && /opt/jboss/wildfly/bin/jboss-cli.sh --connect --commands='/deployment=api.war:read-attribute(name=status)' 2>/dev/null | grep -q OK && /opt/jboss/wildfly/bin/jboss-cli.sh --connect --commands='/deployment=webapp.war:read-attribute(name=status)' 2>/dev/null | grep -q OK"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+volumes:
+  agent-memory-hub-postgres-data:
+
+networks:
+  agent-memory-hub-internal:
+    internal: true
+  agent-memory-hub-host:
+    driver: bridge

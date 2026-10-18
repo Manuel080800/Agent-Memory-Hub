@@ -1,1 +1,10 @@
 /.idea/
+**/target/
+/dist/
+.DS_Store
+config/secrets/
+config-local/
+*.log
+*.p12
+*.jks
+/.junie/

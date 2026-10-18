@@ -1,0 +1,8 @@
+embed-server --server-config=standalone.xml --std-out=echo
+/subsystem=datasources/jdbc-driver=postgresql:add(driver-name=postgresql,driver-module-name=org.postgresql,driver-class-name=org.postgresql.Driver)
+/subsystem=datasources/data-source=AgentMemoryHubDS:add(jndi-name=java:/jdbc/AgentMemoryHubDS,driver-name=postgresql,connection-url=jdbc:postgresql://postgres:5432/agent_memory_hub,user-name=${env.AMH_DB_USERNAME},credential-reference={clear-text=${env.AMH_DB_PASSWORD}},enabled=true,jta=true,use-ccm=true,min-pool-size=2,max-pool-size=20,blocking-timeout-wait-millis=5000,validate-on-match=true,background-validation=false,check-valid-connection-sql=SELECT 1)
+/subsystem=elytron/key-store=agentMemoryHubKeyStore:add(path=${env.AMH_TLS_KEYSTORE},type=PKCS12,credential-reference={clear-text=${env.AMH_TLS_KEYSTORE_PASSWORD}})
+/subsystem=elytron/key-manager=agentMemoryHubKeyManager:add(key-store=agentMemoryHubKeyStore,credential-reference={clear-text=${env.AMH_TLS_KEYSTORE_PASSWORD}})
+/subsystem=elytron/server-ssl-context=agentMemoryHubSslContext:add(key-manager=agentMemoryHubKeyManager,protocols=["TLSv1.3","TLSv1.2"])
+/subsystem=undertow/server=default-server/https-listener=https:write-attribute(name=ssl-context,value=agentMemoryHubSslContext)
+stop-embedded-server
