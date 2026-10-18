@@ -3,11 +3,17 @@ package io.agentmemoryhub.api.controller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentmemoryhub.api.common.McpEndpointType;
 import io.agentmemoryhub.api.model.McpJsonRpcRequestRecord;
+import io.agentmemoryhub.api.model.McpJsonRpcResponseRecord;
 import io.agentmemoryhub.api.service.McpProtocolService;
 import io.agentmemoryhub.core.common.ConnectionType;
 import io.agentmemoryhub.core.common.PlatformRole;
@@ -34,6 +40,7 @@ import io.agentmemoryhub.core.service.workflow.WorkflowService;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -195,12 +202,70 @@ class ApiControllerTest {
         var trustedRequest = new MockHttpServletRequest();
         trustedRequest.setSecure(true);
         trustedRequest.addHeader(HttpHeaders.HOST, "localhost:8443");
-        when(mcpProtocolService.handleRequestByEndpointAndRequest(io.agentmemoryhub.api.common.McpEndpointType.CONTEXT, requestRecord, Locale.ENGLISH)).thenReturn(Optional.empty());
+        when(mcpProtocolService.handleRequestByEndpointAndRequest(io.agentmemoryhub.api.common.McpEndpointType.CONTEXT, requestRecord, Locale.ENGLISH, "2025-03-26")).thenReturn(Optional.empty());
         var trustedResponse = mcpTransportController.handleContextRequest(requestRecord, trustedRequest, Locale.ENGLISH);
+
+        var untrustedOriginRequest = new MockHttpServletRequest();
+        untrustedOriginRequest.setSecure(true);
+        untrustedOriginRequest.addHeader(HttpHeaders.HOST, "localhost:8443");
+        untrustedOriginRequest.addHeader(HttpHeaders.ORIGIN, "https://remote.example");
+        var untrustedOriginResponse = mcpTransportController.handleContextRequest(requestRecord, untrustedOriginRequest, Locale.ENGLISH);
 
         assertEquals(403, untrustedResponse.getStatusCode().value());
         assertEquals(202, trustedResponse.getStatusCode().value());
         assertEquals("2025-03-26", trustedResponse.getHeaders().getFirst("MCP-Protocol-Version"));
+        assertEquals(403, untrustedOriginResponse.getStatusCode().value());
+    }
+
+    @Test
+    void mcpTransportAcceptsEverySupportedProtocolVersion() {
+        // Verifies the HTTP transport accepts every protocol revision supported by the MCP service.
+        var requestRecord = new McpJsonRpcRequestRecord("2.0", null, "notifications/initialized", null);
+        when(mcpProtocolService.handleRequestByEndpointAndRequest(eq(io.agentmemoryhub.api.common.McpEndpointType.CONTEXT), eq(requestRecord), eq(Locale.ENGLISH), anyString())).thenReturn(Optional.empty());
+
+        for (var protocolVersion : List.of("2025-11-25", "2025-06-18", "2025-03-26")) {
+            var request = new MockHttpServletRequest();
+            request.setSecure(true);
+            request.addHeader(HttpHeaders.HOST, "localhost:8443");
+            request.addHeader("MCP-Protocol-Version", protocolVersion);
+
+            var response = mcpTransportController.handleContextRequest(requestRecord, request, Locale.ENGLISH);
+
+            assertEquals(202, response.getStatusCode().value());
+            assertEquals(protocolVersion, response.getHeaders().getFirst("MCP-Protocol-Version"));
+        }
+    }
+
+    @Test
+    void mcpTransportValidatesModernProtocolMetadataAndHeaders() {
+        // Verifies modern MCP requests require matching protocol metadata and routing headers.
+        var objectMapper = new ObjectMapper();
+        var params = objectMapper.createObjectNode();
+        var metadata = params.putObject("_meta");
+        metadata.put("io.modelcontextprotocol/protocolVersion", "2026-07-28");
+        metadata.putObject("io.modelcontextprotocol/clientCapabilities");
+        var requestRecord = new McpJsonRpcRequestRecord("2.0", objectMapper.valueToTree(1), "server/discover", params);
+        var trustedRequest = new MockHttpServletRequest();
+        trustedRequest.setSecure(true);
+        trustedRequest.addHeader(HttpHeaders.HOST, "localhost:8443");
+        trustedRequest.addHeader("MCP-Protocol-Version", "2026-07-28");
+        trustedRequest.addHeader("Mcp-Method", "server/discover");
+        when(mcpProtocolService.handleRequestByEndpointAndRequest(McpEndpointType.CONTEXT, requestRecord, Locale.ENGLISH, "2026-07-28")).thenReturn(Optional.of(new McpJsonRpcResponseRecord("2.0", requestRecord.id(), Map.of("resultType", "complete"), null)));
+
+        var trustedResponse = mcpTransportController.handleContextRequest(requestRecord, trustedRequest, Locale.ENGLISH);
+
+        var mismatchedRequest = new MockHttpServletRequest();
+        mismatchedRequest.setSecure(true);
+        mismatchedRequest.addHeader(HttpHeaders.HOST, "localhost:8443");
+        mismatchedRequest.addHeader("MCP-Protocol-Version", "2026-07-28");
+        mismatchedRequest.addHeader("Mcp-Method", "tools/list");
+        var mismatchedResponse = mcpTransportController.handleContextRequest(requestRecord, mismatchedRequest, Locale.ENGLISH);
+
+        assertEquals(200, trustedResponse.getStatusCode().value());
+        assertEquals("2026-07-28", trustedResponse.getHeaders().getFirst("MCP-Protocol-Version"));
+        assertEquals(400, mismatchedResponse.getStatusCode().value());
+        assertEquals(-32020, ((McpJsonRpcResponseRecord) mismatchedResponse.getBody()).error().code());
+        verify(mcpProtocolService, times(1)).handleRequestByEndpointAndRequest(eq(McpEndpointType.CONTEXT), eq(requestRecord), eq(Locale.ENGLISH), eq("2026-07-28"));
     }
 
     @Test

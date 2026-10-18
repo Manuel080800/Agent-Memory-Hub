@@ -85,9 +85,11 @@ class TaskServiceImplTest {
         var settings = new ProjectSettings();
         settings.setProjectId(project.getId());
         settings.setTaskCreationMode(TaskCreationMode.AUTOMATIC);
+        var activeProfile = new Profile();
+        activeProfile.setProjectId(project.getId());
         when(projectRepository.findById(project.getId())).thenReturn(Optional.of(project));
         when(projectSettingsRepository.findById(project.getId())).thenReturn(Optional.of(settings));
-        when(mcpConnectionRepository.findByProjectIdAndConnectionType(project.getId(), ConnectionType.TASKS)).thenReturn(Optional.empty());
+        when(profileRepository.findByIdAndProjectIdAndEnabledTrue(project.getActiveProfileId(), project.getId())).thenReturn(Optional.of(activeProfile));
 
         var complexAnalysis = taskService.analyzeTaskPromptByProjectIdAndTaskId(project.getId(), "Build integration tests and update the data access layer", null);
         var questionAnalysis = taskService.analyzeTaskPromptByProjectIdAndTaskId(project.getId(), "How does authentication work?", null);
@@ -96,6 +98,27 @@ class TaskServiceImplTest {
         assertEquals("MODERATE", complexAnalysis.complexity());
         assertFalse(questionAnalysis.shouldCreateAutomatically());
         assertEquals("SIMPLE", questionAnalysis.complexity());
+    }
+
+    @Test
+    void analyzesTaskPromptsWhenSelectedTaskRetrievalIsDisabled() {
+        // Verifies the task creation policy remains available when only selected-task retrieval is disabled.
+        var project = new Project();
+        project.setActiveProfileId("profile-1");
+        var settings = new ProjectSettings();
+        settings.setProjectId(project.getId());
+        settings.setTaskCreationMode(TaskCreationMode.SUGGEST);
+        settings.setSelectedTaskRetrievalEnabled(false);
+        var activeProfile = new Profile();
+        activeProfile.setProjectId(project.getId());
+        when(projectRepository.findById(project.getId())).thenReturn(Optional.of(project));
+        when(projectSettingsRepository.findById(project.getId())).thenReturn(Optional.of(settings));
+        when(profileRepository.findByIdAndProjectIdAndEnabledTrue(project.getActiveProfileId(), project.getId())).thenReturn(Optional.of(activeProfile));
+
+        var taskAnalysisRecord = taskService.analyzeTaskPromptByProjectIdAndTaskId(project.getId(), "Build a new integration test and update the service", null);
+
+        assertTrue(taskAnalysisRecord.shouldSuggest());
+        assertFalse(taskAnalysisRecord.shouldCreateAutomatically());
     }
 
     @Test

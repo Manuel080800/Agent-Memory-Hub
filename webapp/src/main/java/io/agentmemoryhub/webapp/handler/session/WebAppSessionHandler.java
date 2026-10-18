@@ -2,6 +2,7 @@ package io.agentmemoryhub.webapp.handler.session;
 
 import io.agentmemoryhub.core.model.record.UserRecord;
 import jakarta.servlet.http.HttpSession;
+import java.util.Objects;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 
@@ -28,7 +29,7 @@ public class WebAppSessionHandler {
     }
 
     public boolean hasUser(HttpSession httpSession) {
-        return getUser(httpSession) != null;
+        return Objects.nonNull(getUser(httpSession));
     }
 
     public UserRecord getUser(HttpSession httpSession) {

@@ -7,5 +7,5 @@ import java.util.Locale;
 import java.util.Optional;
 
 public interface McpProtocolService {
-    Optional<McpJsonRpcResponseRecord> handleRequestByEndpointAndRequest(McpEndpointType mcpEndpointType, McpJsonRpcRequestRecord jsonRpcRequestRecord, Locale locale);
+    Optional<McpJsonRpcResponseRecord> handleRequestByEndpointAndRequest(McpEndpointType mcpEndpointType, McpJsonRpcRequestRecord jsonRpcRequestRecord, Locale locale, String protocolVersion);
 }

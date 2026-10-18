@@ -28,6 +28,7 @@ import io.agentmemoryhub.core.service.workflow.WorkflowService;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.StaticMessageSource;
@@ -66,9 +67,13 @@ class McpToolRegistryImplTest {
         // Verifies that both MCP endpoints publish the complete, independent tool catalogs.
         var contextToolList = mcpToolRegistry.listToolsByEndpoint(McpEndpointType.CONTEXT, Locale.ENGLISH);
         var taskToolList = mcpToolRegistry.listToolsByEndpoint(McpEndpointType.TASKS, Locale.ENGLISH);
+        var contextToolNameSet = contextToolList.stream().map(McpToolDefinitionRecord::name).collect(java.util.stream.Collectors.toSet());
+        var taskToolNameSet = taskToolList.stream().map(McpToolDefinitionRecord::name).collect(java.util.stream.Collectors.toSet());
 
         assertEquals(35, contextToolList.size());
         assertEquals(15, taskToolList.size());
+        assertEquals(Set.of("get_project_settings", "get_active_profile", "get_project_context", "get_context_resource", "list_projects", "get_project", "create_project", "update_project", "delete_project", "list_profiles", "get_profile", "create_profile", "update_profile", "delete_profile", "select_active_profile", "list_skills", "get_skill", "create_skill", "update_skill", "delete_skill", "list_workflows", "get_workflow", "create_workflow", "update_workflow", "delete_workflow", "list_memories", "get_memory", "create_memory", "update_memory", "delete_memory", "propose_memory", "list_memory_proposals", "get_memory_proposal", "update_memory_proposal", "delete_memory_proposal"), contextToolNameSet);
+        assertEquals(Set.of("get_project_settings", "list_tasks", "get_task", "create_task", "update_task", "delete_task", "get_task_context", "list_task_blocks", "get_task_block", "create_task_block", "update_task_block", "delete_task_block", "get_workspace_reference_guidance", "analyze_task_prompt", "inspect_task_continuity"), taskToolNameSet);
         assertTrue(contextToolList.stream().anyMatch(tool -> "get_project_settings".equals(tool.name())));
         assertTrue(taskToolList.stream().anyMatch(tool -> "get_project_settings".equals(tool.name())));
         assertTrue(contextToolList.stream().anyMatch(tool -> "propose_memory".equals(tool.name())));

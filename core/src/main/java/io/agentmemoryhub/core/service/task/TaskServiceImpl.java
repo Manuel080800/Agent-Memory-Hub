@@ -222,7 +222,7 @@ public class TaskServiceImpl implements TaskService {
     @Transactional(readOnly = true)
     public TaskAnalysisRecord analyzeTaskPromptByProjectIdAndTaskId(String projectId, String prompt, String taskId) {
         var project = findProjectById(projectId);
-        validateProjectForRecovery(project);
+        validateProjectForTaskAnalysis(project);
         var projectSettings = projectSettingsRepository.findById(projectId).orElseGet(ProjectSettings::new);
         var mode = projectSettings.getTaskCreationMode();
         var complexity = mode == TaskCreationMode.MANUAL ? "SIMPLE" : classifyComplexity(prompt);
@@ -305,6 +305,19 @@ public class TaskServiceImpl implements TaskService {
 
         if (!projectSettings.isSelectedTaskRetrievalEnabled() || taskConnectionIsUnavailable) {
             throw new HubException("CONNECTION_UNAVAILABLE", "error.connectionUnavailable", 503, project.getId());
+        }
+    }
+
+    private void validateProjectForTaskAnalysis(Project project) {
+        if (!project.isEnabled()) {
+            throw new HubException("PROJECT_INACTIVE", "error.projectInactive", 409, project.getId());
+        }
+
+        var activeProfileId = project.getActiveProfileId();
+        var activeProfileIsUnavailable = Objects.isNull(activeProfileId) || profileRepository.findByIdAndProjectIdAndEnabledTrue(activeProfileId, project.getId()).isEmpty();
+
+        if (activeProfileIsUnavailable) {
+            throw new HubException("NO_ACTIVE_PROFILE", "error.noActiveProfile", 409, project.getId());
         }
     }
 

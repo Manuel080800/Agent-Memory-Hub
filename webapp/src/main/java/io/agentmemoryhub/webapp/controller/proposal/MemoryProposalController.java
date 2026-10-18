@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import java.util.Objects;
 
 @Controller
 @RequiredArgsConstructor
@@ -54,7 +55,7 @@ public class MemoryProposalController {
     public ResponseEntity<?> approveMemoryProposal(@PathVariable String projectId, @PathVariable String profileId, @PathVariable String taskId, @PathVariable String proposalId, @RequestBody ProposalApprovalInputRecord proposalApprovalInputRecord) {
         validateProposalRelation(projectId, profileId, taskId, proposalId);
 
-        if (proposalApprovalInputRecord == null) {
+        if (Objects.isNull(proposalApprovalInputRecord)) {
             throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "title");
         }
 

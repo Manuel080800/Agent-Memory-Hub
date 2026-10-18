@@ -12,6 +12,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 @Getter
@@ -47,7 +48,7 @@ public class TaskBlock {
     @PrePersist
     protected void setCreationTimestamps() {
         var now = Instant.now();
-        if (createdAt == null) {
+        if (Objects.isNull(createdAt)) {
             createdAt = now;
         }
         updatedAt = now;

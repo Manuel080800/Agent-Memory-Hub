@@ -65,7 +65,7 @@ public class WebAppAuthorizationInterceptor implements HandlerInterceptor {
 
         var projectId = findProjectIdByPath(requestPath);
 
-        if (projectId != null && !hasProjectAccess(httpServletRequest, requestPath, projectId, userRecord)) {
+        if (Objects.nonNull(projectId) && !hasProjectAccess(httpServletRequest, requestPath, projectId, userRecord)) {
             writeAuthorizationFailure(httpServletRequest, httpServletResponse, HttpServletResponse.SC_FORBIDDEN);
             return false;
         }

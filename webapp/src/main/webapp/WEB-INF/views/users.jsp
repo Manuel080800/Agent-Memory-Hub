@@ -19,7 +19,7 @@
         </form>
     </div>
 </nav>
-<main id="users-app" class="container-fluid px-lg-5 py-4">
+<main id="users-app" class="container-fluid px-lg-5 py-4" data-context-path="${pageContext.request.contextPath}">
     <div class="d-flex justify-content-between align-items-end mb-4">
         <div><p class="text-primary fw-semibold mb-1"><spring:message code='ui.admin' /></p><h1 class="h2 mb-0"><spring:message code='ui.users' /></h1></div>
         <a class="btn btn-outline-secondary" href="${pageContext.request.contextPath}/dashboard"><spring:message code='ui.users.back' /></a>
@@ -58,77 +58,6 @@
     </section>
 </main>
 <script src="${pageContext.request.contextPath}/webjars/vue/3.5.22/dist/vue.global.prod.js"></script>
-<script>
-const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-const contextPath = '${pageContext.request.contextPath}';
-const messages = {
-    requestFailed: "<spring:message code='ui.request.failed' javaScriptEscape='true' />",
-    requestError: "<spring:message code='ui.request.error' javaScriptEscape='true' />",
-    userCreated: "<spring:message code='ui.user.created' javaScriptEscape='true' />",
-    userUpdated: "<spring:message code='ui.user.updated' javaScriptEscape='true' />",
-    userDeleteConfirm: "<spring:message code='ui.user.delete.confirm' javaScriptEscape='true' />",
-    userDeleted: "<spring:message code='ui.user.deleted' javaScriptEscape='true' />"
-};
-const { createApp } = Vue;
-
-createApp({
-    data() {
-        return {
-            userList: [],
-            createForm: { fullName: '', email: '', password: '', platformRole: 'USER' },
-            errorMessage: '',
-            noticeMessage: ''
-        };
-    },
-    mounted() {
-        this.loadUsers();
-    },
-    methods: {
-        async request(path, options = {}) {
-            const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-            if (options.method && options.method !== 'GET') headers['X-CSRF-Token'] = csrfToken;
-            const response = await fetch(contextPath + path, { ...options, headers });
-            if (!response.ok) {
-                const result = await response.json().catch(() => ({}));
-                throw new Error(result.message || result.error?.message || messages.requestFailed.replace('{0}', response.status));
-            }
-            return response.status === 204 ? null : response.json();
-        },
-        async loadUsers() {
-            try {
-                const page = await this.request('/users?page=0&pageSize=100');
-                this.userList = page.items || [];
-            } catch (error) { this.showError(error); }
-        },
-        async createUser() {
-            try {
-                await this.request('/users', { method: 'POST', body: JSON.stringify({ ...this.createForm, enabled: true }) });
-                this.createForm = { fullName: '', email: '', password: '', platformRole: 'USER' };
-                this.noticeMessage = messages.userCreated;
-                await this.loadUsers();
-            } catch (error) { this.showError(error); }
-        },
-        async saveUser(user) {
-            try {
-                const changes = { fullName: user.fullName, email: user.email, platformRole: user.platformRole, enabled: user.enabled };
-                await this.request('/users/' + user.id, { method: 'PUT', body: JSON.stringify(changes) });
-                this.noticeMessage = messages.userUpdated;
-            } catch (error) { this.showError(error); }
-        },
-        async deleteUser(user) {
-            if (!window.confirm(messages.userDeleteConfirm.replace('{0}', user.fullName))) return;
-            try {
-                await this.request('/users/' + user.id + '?confirm=true', { method: 'DELETE' });
-                this.userList = this.userList.filter(item => item.id !== user.id);
-                this.noticeMessage = messages.userDeleted;
-            } catch (error) { this.showError(error); }
-        },
-        showError(error) {
-            this.errorMessage = error.message || messages.requestError;
-            this.noticeMessage = '';
-        }
-    }
-}).mount('#users-app');
-</script>
+<script type="module" src="${pageContext.request.contextPath}/assets/js/pages/users.js"></script>
 </body>
 </html>

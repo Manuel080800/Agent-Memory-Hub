@@ -214,11 +214,11 @@ public class McpToolRegistryImpl implements McpToolRegistry {
         var propertySchema = new LinkedHashMap<String, Object>();
         propertySchema.put("type", "integer");
 
-        if (minimum != null) {
+        if (Objects.nonNull(minimum)) {
             propertySchema.put("minimum", minimum);
         }
 
-        if (maximum != null) {
+        if (Objects.nonNull(maximum)) {
             propertySchema.put("maximum", maximum);
         }
 
@@ -417,7 +417,7 @@ public class McpToolRegistryImpl implements McpToolRegistry {
     }
 
     private void validateObjectSchema(JsonNode valueNode, Map<String, Object> schema, String path) {
-        if (valueNode == null || !valueNode.isObject()) {
+        if (Objects.isNull(valueNode) || !valueNode.isObject()) {
             throw invalidArgument(path);
         }
         var propertySchemaMap = castSchemaMap(schema.get("properties"));
@@ -452,7 +452,7 @@ public class McpToolRegistryImpl implements McpToolRegistry {
     }
 
     private void validateStringSchema(JsonNode valueNode, Map<String, Object> schema, String path) {
-        if (valueNode == null || !valueNode.isTextual()) {
+        if (Objects.isNull(valueNode) || !valueNode.isTextual()) {
             throw invalidArgument(path);
         }
 
@@ -470,7 +470,7 @@ public class McpToolRegistryImpl implements McpToolRegistry {
     }
 
     private void validateArraySchema(JsonNode valueNode, Map<String, Object> schema, String path) {
-        if (valueNode == null || !valueNode.isArray()) {
+        if (Objects.isNull(valueNode) || !valueNode.isArray()) {
             throw invalidArgument(path);
         }
 
@@ -484,7 +484,7 @@ public class McpToolRegistryImpl implements McpToolRegistry {
 
         var maximumItems = schema.get("maxItems") instanceof Integer value ? value : null;
 
-        if (maximumItems != null && valueNode.size() > maximumItems) {
+        if (Objects.nonNull(maximumItems) && valueNode.size() > maximumItems) {
             throw invalidArgument(path);
         }
 
@@ -504,7 +504,7 @@ public class McpToolRegistryImpl implements McpToolRegistry {
         var minimum = schema.get("minimum") instanceof Number number ? BigInteger.valueOf(number.longValue()) : null;
         var maximum = schema.get("maximum") instanceof Number number ? BigInteger.valueOf(number.longValue()) : null;
 
-        if ((minimum != null && integerValue.compareTo(minimum) < 0) || (maximum != null && integerValue.compareTo(maximum) > 0)) {
+        if ((Objects.nonNull(minimum) && integerValue.compareTo(minimum) < 0) || (Objects.nonNull(maximum) && integerValue.compareTo(maximum) > 0)) {
             throw invalidArgument(path);
         }
     }
@@ -655,7 +655,7 @@ public class McpToolRegistryImpl implements McpToolRegistry {
     private <T> T convertChanges(JsonNode arguments, Class<T> recordType, String... fieldNames) {
         var changesNode = arguments.get("changes");
 
-        if (changesNode == null || !changesNode.isObject()) {
+        if (Objects.isNull(changesNode) || !changesNode.isObject()) {
             throw invalidArgument("arguments.changes");
         }
 
@@ -667,7 +667,7 @@ public class McpToolRegistryImpl implements McpToolRegistry {
 
         for (var fieldName : fieldNames) {
             var valueNode = source.get(fieldName);
-            if (valueNode != null) {
+            if (Objects.nonNull(valueNode)) {
                 inputNode.set(fieldName, valueNode);
             }
         }
@@ -678,7 +678,7 @@ public class McpToolRegistryImpl implements McpToolRegistry {
     private String requiredString(JsonNode arguments, String fieldName) {
         var valueNode = arguments.get(fieldName);
 
-        if (valueNode == null || !valueNode.isTextual() || valueNode.asText().isBlank()) {
+        if (Objects.isNull(valueNode) || !valueNode.isTextual() || valueNode.asText().isBlank()) {
             throw invalidArgument("arguments." + fieldName);
         }
 
@@ -688,7 +688,7 @@ public class McpToolRegistryImpl implements McpToolRegistry {
     private String optionalString(JsonNode arguments, String fieldName) {
         var valueNode = arguments.get(fieldName);
 
-        if (valueNode == null || valueNode.isNull()) {
+        if (Objects.isNull(valueNode) || valueNode.isNull()) {
             return null;
         }
 
@@ -702,7 +702,7 @@ public class McpToolRegistryImpl implements McpToolRegistry {
     private Boolean optionalBoolean(JsonNode arguments, String fieldName) {
         var valueNode = arguments.get(fieldName);
 
-        if (valueNode == null || valueNode.isNull()) {
+        if (Objects.isNull(valueNode) || valueNode.isNull()) {
             return null;
         }
 
@@ -716,7 +716,7 @@ public class McpToolRegistryImpl implements McpToolRegistry {
     private boolean requiredBoolean(JsonNode arguments, String fieldName) {
         var value = optionalBoolean(arguments, fieldName);
 
-        if (value == null) {
+        if (Objects.isNull(value)) {
             throw invalidArgument("arguments." + fieldName);
         }
 
@@ -726,7 +726,7 @@ public class McpToolRegistryImpl implements McpToolRegistry {
     private int optionalInteger(JsonNode arguments, String fieldName, int defaultValue) {
         var valueNode = arguments.get(fieldName);
 
-        if (valueNode == null || valueNode.isNull()) {
+        if (Objects.isNull(valueNode) || valueNode.isNull()) {
             return defaultValue;
         }
 
@@ -740,7 +740,7 @@ public class McpToolRegistryImpl implements McpToolRegistry {
     private Long optionalVersion(JsonNode arguments) {
         var valueNode = arguments.get("expectedVersion");
 
-        if (valueNode == null || valueNode.isNull()) {
+        if (Objects.isNull(valueNode) || valueNode.isNull()) {
             return null;
         }
 
