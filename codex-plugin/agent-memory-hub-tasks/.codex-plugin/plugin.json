@@ -1,0 +1,24 @@
+{
+  "name": "agent-memory-hub-tasks",
+  "version": "1.0.1",
+  "description": "Administra continuidad temporal de proyectos mediante el MCP de tareas de Agent Memory Hub.",
+  "keywords": [
+    "codex",
+    "tasks",
+    "continuity",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "hooks": "./hooks/hooks.json",
+  "interface": {
+    "displayName": "Agent Memory Hub Tasks",
+    "shortDescription": "Administra continuidad temporal de tareas.",
+    "category": "Productivity"
+  },
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/setup/SKILL.md"
+    }
+  }
+}

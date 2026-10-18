@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "agent-memory-hub-tasks": {
+      "type": "http",
+      "url": "https://localhost:8443/api/mcp/tasks"
+    }
+  }
+}

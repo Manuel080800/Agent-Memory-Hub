@@ -1,0 +1,32 @@
+{
+  "name": "agent-memory-hub-local",
+  "interface": {
+    "displayName": "Agent Memory Hub"
+  },
+  "plugins": [
+    {
+      "name": "agent-memory-hub-context",
+      "source": {
+        "source": "local",
+        "path": "./codex-plugin/agent-memory-hub-context"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "agent-memory-hub-tasks",
+      "source": {
+        "source": "local",
+        "path": "./codex-plugin/agent-memory-hub-tasks"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

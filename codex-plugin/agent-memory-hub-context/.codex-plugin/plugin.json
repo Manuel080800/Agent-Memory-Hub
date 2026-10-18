@@ -1,0 +1,24 @@
+{
+  "name": "agent-memory-hub-context",
+  "version": "1.0.1",
+  "description": "Recupera el contexto permanente de proyectos de Agent Memory Hub mediante MCP.",
+  "keywords": [
+    "codex",
+    "memory",
+    "context",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "hooks": "./hooks/hooks.json",
+  "interface": {
+    "displayName": "Agent Memory Hub Context",
+    "shortDescription": "Recupera contexto permanente de proyectos.",
+    "category": "Productivity"
+  },
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/setup/SKILL.md"
+    }
+  }
+}

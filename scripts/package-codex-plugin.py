@@ -62,27 +62,23 @@ def validate_marketplace():
 
 def validate_plugin(var_plugin_directory_name, var_plugin_configuration):
     var_plugin_root = MARKETPLACE_ROOT / var_plugin_directory_name
-    var_plugin_manifest = read_json_file(var_plugin_root / "plugin.json")
-    var_openai_extension = var_plugin_manifest.get("extensions", {}).get("com.openai", {})
+    var_plugin_manifest = read_json_file(var_plugin_root / ".codex-plugin" / "plugin.json")
     if var_plugin_manifest.get("name") != var_plugin_directory_name:
         raise ValueError(f"The plugin name must be {var_plugin_directory_name}.")
-    if var_openai_extension.get("hooks") != "./hooks/hooks.json":
+    if var_plugin_manifest.get("hooks") != "./hooks/hooks.json":
         raise ValueError(f"{var_plugin_directory_name} must reference ./hooks/hooks.json.")
-    if var_openai_extension.get("onboardingSkill") != "./skills/setup/SKILL.md":
+    if var_plugin_manifest.get("extensions", {}).get("com.openai", {}).get("onboardingSkill") != "./skills/setup/SKILL.md":
         raise ValueError(f"{var_plugin_directory_name} must reference its setup skill.")
 
-    var_mcp_configuration = read_json_file(var_plugin_root / "mcp.json")
+    var_mcp_configuration = read_json_file(var_plugin_root / ".mcp.json")
     var_mcp_server_map = var_mcp_configuration.get("mcpServers", {})
     if var_mcp_server_map.keys() != {var_plugin_configuration["server_name"]}:
         raise ValueError(f"{var_plugin_directory_name} must contain exactly one independent MCP server.")
     var_server_configuration = var_mcp_server_map[var_plugin_configuration["server_name"]]
-    if var_server_configuration.get("type") != "streamable-http":
-        raise ValueError(f"{var_plugin_directory_name} must use Streamable HTTP transport.")
+    if var_server_configuration.get("type") != "http":
+        raise ValueError(f"{var_plugin_directory_name} must use the Codex HTTP transport.")
     if var_server_configuration.get("url") != var_plugin_configuration["server_url"]:
         raise ValueError(f"{var_plugin_directory_name} must use its local HTTPS endpoint.")
-    var_server_authentication = var_server_configuration.get("extensions", {}).get("com.openai", {}).get("auth", {})
-    if var_server_authentication.get("type") != "none":
-        raise ValueError(f"{var_plugin_directory_name} must declare the planned anonymous local MCP access.")
 
     var_hook_configuration = read_json_file(var_plugin_root / "hooks" / "hooks.json")
     var_hook_map = var_hook_configuration.get("hooks", {})
@@ -103,8 +99,8 @@ def validate_plugin(var_plugin_directory_name, var_plugin_configuration):
                     raise ValueError(f"A hook in {var_plugin_directory_name} has an unsupported type.")
 
     var_required_path_list = [
-        var_plugin_root / "plugin.json",
-        var_plugin_root / "mcp.json",
+        var_plugin_root / ".codex-plugin" / "plugin.json",
+        var_plugin_root / ".mcp.json",
         var_plugin_root / "hooks" / "hooks.json",
         var_plugin_root / "hooks" / var_plugin_configuration["hook_script"],
         var_plugin_root / "skills" / "setup" / "SKILL.md",
