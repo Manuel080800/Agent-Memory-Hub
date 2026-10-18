@@ -1,5 +1,6 @@
 package io.agentmemoryhub.api.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.agentmemoryhub.api.common.McpEndpointType;
 import io.agentmemoryhub.api.model.McpJsonRpcErrorRecord;
 import io.agentmemoryhub.api.model.McpJsonRpcRequestRecord;
@@ -38,6 +39,10 @@ public class McpProtocolServiceImpl implements McpProtocolService {
             return Optional.empty();
         }
 
+        if (!isValidRequestId(jsonRpcRequestRecord.id())) {
+            return createErrorResponse(jsonRpcRequestRecord, -32600, "mcp.error.invalidRequest", locale);
+        }
+
         if ("initialize".equals(jsonRpcRequestRecord.method()) && Objects.isNull(jsonRpcRequestRecord.params())) {
             return createErrorResponse(jsonRpcRequestRecord, -32602, "mcp.error.invalidParameters", locale);
         }
@@ -48,9 +53,9 @@ public class McpProtocolServiceImpl implements McpProtocolService {
 
         try {
             return switch (jsonRpcRequestRecord.method()) {
-                case "initialize" -> Optional.of(createInitializeResponse(mcpEndpointType, jsonRpcRequestRecord));
+                case "initialize" -> MODERN_MCP_PROTOCOL_VERSION.equals(protocolVersion) ? createErrorResponse(jsonRpcRequestRecord, -32601, "mcp.error.methodNotFound", locale) : Optional.of(createInitializeResponse(mcpEndpointType, jsonRpcRequestRecord));
                 case "server/discover" -> MODERN_MCP_PROTOCOL_VERSION.equals(protocolVersion) ? Optional.of(createDiscoverResponse(mcpEndpointType, jsonRpcRequestRecord)) : createErrorResponse(jsonRpcRequestRecord, -32601, "mcp.error.methodNotFound", locale);
-                case "ping" -> Optional.of(createSuccessResponse(jsonRpcRequestRecord, MODERN_MCP_PROTOCOL_VERSION.equals(protocolVersion) ? Map.of("_meta", createServerMetadata(mcpEndpointType)) : Map.of()));
+                case "ping" -> Optional.of(createSuccessResponse(jsonRpcRequestRecord, MODERN_MCP_PROTOCOL_VERSION.equals(protocolVersion) ? Map.of("resultType", "complete", "_meta", createServerMetadata(mcpEndpointType)) : Map.of()));
                 case "tools/list" -> Optional.of(createToolsListResponse(mcpEndpointType, jsonRpcRequestRecord, locale, protocolVersion));
                 case "tools/call" -> createToolCallResponse(mcpEndpointType, jsonRpcRequestRecord, locale, protocolVersion);
                 case "notifications/initialized" -> Optional.empty();
@@ -125,6 +130,10 @@ public class McpProtocolServiceImpl implements McpProtocolService {
         return new McpJsonRpcResponseRecord(JSON_RPC_VERSION, request.id(), result, null);
     }
 
+    private boolean isValidRequestId(JsonNode requestId) {
+        return requestId.isTextual() || requestId.isIntegralNumber();
+    }
+
     private Optional<McpJsonRpcResponseRecord> createErrorResponse(McpJsonRpcRequestRecord request, int errorCode, String messageKey, Locale locale) {
         if (Objects.isNull(request) || Objects.isNull(request.id())) {
             return Optional.empty();
@@ -132,6 +141,7 @@ public class McpProtocolServiceImpl implements McpProtocolService {
 
         var errorMessage = messageSource.getMessage(messageKey, null, messageKey, locale);
         var jsonRpcErrorRecord = new McpJsonRpcErrorRecord(errorCode, errorMessage, null);
-        return Optional.of(new McpJsonRpcResponseRecord(JSON_RPC_VERSION, request.id(), null, jsonRpcErrorRecord));
+        var responseId = isValidRequestId(request.id()) ? request.id() : null;
+        return Optional.of(new McpJsonRpcResponseRecord(JSON_RPC_VERSION, responseId, null, jsonRpcErrorRecord));
     }
 }

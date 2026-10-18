@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.NullNode;
 import io.agentmemoryhub.api.common.McpEndpointType;
 import io.agentmemoryhub.api.model.McpJsonRpcRequestRecord;
 import io.agentmemoryhub.api.model.McpTextContentRecord;
@@ -70,6 +71,25 @@ public class McpProtocolServiceImplTest {
         var response = mcpProtocolService.handleRequestByEndpointAndRequest(McpEndpointType.CONTEXT, request, Locale.ENGLISH, "2025-11-25");
 
         assertTrue(response.isEmpty());
+    }
+
+    @Test
+    void rejectsNullAndNonIntegerJsonRpcRequestIds() {
+        // Verifies JSON-RPC rejects null, fractional, and object-valued IDs without echoing them.
+        var nullIdRequest = new McpJsonRpcRequestRecord("2.0", NullNode.instance, "ping", objectMapper.createObjectNode());
+        var fractionalIdRequest = new McpJsonRpcRequestRecord("2.0", objectMapper.valueToTree(1.5), "ping", objectMapper.createObjectNode());
+        var objectIdRequest = new McpJsonRpcRequestRecord("2.0", objectMapper.createObjectNode().put("invalid", true), "ping", objectMapper.createObjectNode());
+
+        var nullIdResponse = mcpProtocolService.handleRequestByEndpointAndRequest(McpEndpointType.CONTEXT, nullIdRequest, Locale.ENGLISH, "2025-11-25").orElseThrow();
+        var fractionalIdResponse = mcpProtocolService.handleRequestByEndpointAndRequest(McpEndpointType.CONTEXT, fractionalIdRequest, Locale.ENGLISH, "2025-11-25").orElseThrow();
+        var objectIdResponse = mcpProtocolService.handleRequestByEndpointAndRequest(McpEndpointType.CONTEXT, objectIdRequest, Locale.ENGLISH, "2025-11-25").orElseThrow();
+
+        assertEquals(-32600, nullIdResponse.error().code());
+        assertEquals(-32600, fractionalIdResponse.error().code());
+        assertEquals(-32600, objectIdResponse.error().code());
+        assertTrue(Objects.isNull(nullIdResponse.id()));
+        assertTrue(Objects.isNull(fractionalIdResponse.id()));
+        assertTrue(Objects.isNull(objectIdResponse.id()));
     }
 
     @Test
@@ -140,5 +160,19 @@ public class McpProtocolServiceImplTest {
         assertEquals("complete", toolsCallResult.get("resultType"));
         assertEquals(Map.of("success", true), toolsCallResult.get("structuredContent"));
         assertTrue(toolsCallResult.containsKey("_meta"));
+    }
+
+    @Test
+    void modernPingReturnsCompleteResultAndRejectsLegacyInitialization() {
+        // Verifies modern MCP pings use a typed result and modern requests do not start a legacy handshake.
+        var pingRequest = new McpJsonRpcRequestRecord("2.0", objectMapper.valueToTree(11), "ping", objectMapper.createObjectNode());
+        var initializeRequest = new McpJsonRpcRequestRecord("2.0", objectMapper.valueToTree(12), "initialize", objectMapper.valueToTree(Map.of("protocolVersion", "2025-11-25")));
+
+        var pingResponse = mcpProtocolService.handleRequestByEndpointAndRequest(McpEndpointType.CONTEXT, pingRequest, Locale.ENGLISH, "2026-07-28").orElseThrow();
+        var pingResult = (Map<?, ?>) objectMapper.convertValue(pingResponse.result(), Map.class);
+        var initializeResponse = mcpProtocolService.handleRequestByEndpointAndRequest(McpEndpointType.CONTEXT, initializeRequest, Locale.ENGLISH, "2026-07-28").orElseThrow();
+
+        assertEquals("complete", pingResult.get("resultType"));
+        assertEquals(-32601, initializeResponse.error().code());
     }
 }

@@ -15,6 +15,7 @@ import io.agentmemoryhub.api.common.McpEndpointType;
 import io.agentmemoryhub.api.model.McpToolDefinitionRecord;
 import io.agentmemoryhub.core.common.TaskCreationMode;
 import io.agentmemoryhub.core.model.record.ProjectSettingsRecord;
+import io.agentmemoryhub.core.model.record.WorkspaceReferenceRecord;
 import io.agentmemoryhub.core.service.context.ContextService;
 import io.agentmemoryhub.core.service.memory.MemoryService;
 import io.agentmemoryhub.core.service.profile.ProfileService;
@@ -46,6 +47,7 @@ public class McpToolRegistryImplTest {
     private TaskService taskService;
     private TaskBlockService taskBlockService;
     private McpToolRegistryImpl mcpToolRegistry;
+    private StaticMessageSource messageSource;
 
     @BeforeEach
     void setUp() {
@@ -59,7 +61,8 @@ public class McpToolRegistryImplTest {
         memoryProposalService = mock(MemoryProposalService.class);
         taskService = mock(TaskService.class);
         taskBlockService = mock(TaskBlockService.class);
-        mcpToolRegistry = new McpToolRegistryImpl(contextService, projectService, projectSettingsService, profileService, skillService, workflowService, memoryService, memoryProposalService, taskService, taskBlockService, new ObjectMapper(), new StaticMessageSource());
+        messageSource = new StaticMessageSource();
+        mcpToolRegistry = new McpToolRegistryImpl(contextService, projectService, projectSettingsService, profileService, skillService, workflowService, memoryService, memoryProposalService, taskService, taskBlockService, new ObjectMapper(), messageSource);
     }
 
     @Test
@@ -149,6 +152,30 @@ public class McpToolRegistryImplTest {
 
         assertTrue(toolResultRecord.isError());
         verifyNoInteractions(profileService);
+    }
+
+    @Test
+    void localizesWorkspaceReferenceGuidanceForTheRequestedMcpLocale() {
+        // Verifies workspace instructions returned for Codex are translated in English and Spanish.
+        var instructionKeyList = List.of("workspace.guidance.read", "workspace.guidance.activeProfile");
+        var workspaceReferenceRecord = new WorkspaceReferenceRecord(".agent-memory-hub/workspace.json", 1, "https://localhost:8443", "project-1", null, instructionKeyList);
+        var arguments = new ObjectMapper().createObjectNode().put("projectId", "project-1");
+        messageSource.addMessage("workspace.guidance.read", Locale.ENGLISH, "Read with Codex file tools.");
+        messageSource.addMessage("workspace.guidance.activeProfile", Locale.ENGLISH, "Get the active profile from the Hub.");
+        messageSource.addMessage("workspace.guidance.read", Locale.forLanguageTag("es"), "Lee con las herramientas de archivos de Codex.");
+        messageSource.addMessage("workspace.guidance.activeProfile", Locale.forLanguageTag("es"), "Obtén el perfil activo del Hub.");
+        when(taskService.getWorkspaceReferenceGuidanceByProjectIdAndTaskId("project-1", null)).thenReturn(workspaceReferenceRecord);
+
+        var englishResult = mcpToolRegistry.callToolByEndpointAndNameAndArguments(McpEndpointType.TASKS, "get_workspace_reference_guidance", arguments, Locale.ENGLISH);
+        var spanishResult = mcpToolRegistry.callToolByEndpointAndNameAndArguments(McpEndpointType.TASKS, "get_workspace_reference_guidance", arguments, Locale.forLanguageTag("es"));
+        var englishGuidance = new ObjectMapper().convertValue(((Map<?, ?>) englishResult.structuredContent()).get("data"), WorkspaceReferenceRecord.class);
+        var spanishGuidance = new ObjectMapper().convertValue(((Map<?, ?>) spanishResult.structuredContent()).get("data"), WorkspaceReferenceRecord.class);
+
+        assertEquals(instructionKeyList.size(), englishGuidance.instructions().size());
+        assertEquals(List.of("Read with Codex file tools.", "Get the active profile from the Hub."), englishGuidance.instructions());
+        assertEquals(List.of("Lee con las herramientas de archivos de Codex.", "Obtén el perfil activo del Hub."), spanishGuidance.instructions());
+        assertEquals(".agent-memory-hub/workspace.json", spanishGuidance.relativePath());
+        assertEquals("project-1", spanishGuidance.projectId());
     }
 
     private McpToolDefinitionRecord findToolByName(List<McpToolDefinitionRecord> toolDefinitionRecordList, String toolName) {

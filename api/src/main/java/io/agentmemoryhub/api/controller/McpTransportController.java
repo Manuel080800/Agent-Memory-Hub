@@ -1,5 +1,6 @@
 package io.agentmemoryhub.api.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.agentmemoryhub.api.common.McpEndpointType;
 import io.agentmemoryhub.api.model.McpJsonRpcErrorRecord;
 import io.agentmemoryhub.api.model.McpJsonRpcRequestRecord;
@@ -80,7 +81,15 @@ public class McpTransportController {
         var headerProtocolVersion = httpServletRequest.getHeader(MCP_PROTOCOL_VERSION_HEADER);
         var bodyProtocolVersion = readModernProtocolVersion(jsonRpcRequestRecord);
 
-        if (Objects.isNull(headerProtocolVersion) || headerProtocolVersion.isBlank() || Objects.isNull(bodyProtocolVersion) || !headerProtocolVersion.equals(bodyProtocolVersion)) {
+        if (Objects.isNull(headerProtocolVersion) || headerProtocolVersion.isBlank()) {
+            return createModernErrorResponse(jsonRpcRequestRecord, HttpStatus.BAD_REQUEST, -32020, "Header mismatch", null);
+        }
+
+        if (Objects.isNull(bodyProtocolVersion)) {
+            return createModernErrorResponse(jsonRpcRequestRecord, HttpStatus.BAD_REQUEST, -32602, "Invalid params", null);
+        }
+
+        if (!headerProtocolVersion.equals(bodyProtocolVersion)) {
             return createModernErrorResponse(jsonRpcRequestRecord, HttpStatus.BAD_REQUEST, -32020, "Header mismatch", null);
         }
 
@@ -88,11 +97,15 @@ public class McpTransportController {
             return createModernErrorResponse(jsonRpcRequestRecord, HttpStatus.BAD_REQUEST, -32022, "Unsupported protocol version", Map.of("supported", SUPPORTED_MCP_PROTOCOL_VERSIONS, "requested", bodyProtocolVersion));
         }
 
-        if (!hasValidModernMetadata(jsonRpcRequestRecord) || !hasValidModernHeaders(jsonRpcRequestRecord, httpServletRequest)) {
+        if (!hasValidModernMetadata(jsonRpcRequestRecord)) {
+            return createModernErrorResponse(jsonRpcRequestRecord, HttpStatus.BAD_REQUEST, -32602, "Invalid params", null);
+        }
+
+        if (!hasValidModernHeaders(jsonRpcRequestRecord, httpServletRequest)) {
             return createModernErrorResponse(jsonRpcRequestRecord, HttpStatus.BAD_REQUEST, -32020, "Header mismatch", null);
         }
 
-        if (Objects.isNull(jsonRpcRequestRecord) || Objects.isNull(jsonRpcRequestRecord.id())) {
+        if (Objects.isNull(jsonRpcRequestRecord) || !isValidRequestId(jsonRpcRequestRecord.id())) {
             return createModernErrorResponse(jsonRpcRequestRecord, HttpStatus.BAD_REQUEST, -32600, "Invalid Request", null);
         }
 
@@ -107,8 +120,13 @@ public class McpTransportController {
     }
 
     private ResponseEntity<?> createModernErrorResponse(McpJsonRpcRequestRecord jsonRpcRequestRecord, HttpStatus httpStatus, int errorCode, String message, Object errorData) {
-        var responseRecord = new McpJsonRpcResponseRecord("2.0", Objects.isNull(jsonRpcRequestRecord) ? null : jsonRpcRequestRecord.id(), null, new McpJsonRpcErrorRecord(errorCode, message, errorData));
+        var responseId = Objects.nonNull(jsonRpcRequestRecord) && isValidRequestId(jsonRpcRequestRecord.id()) ? jsonRpcRequestRecord.id() : null;
+        var responseRecord = new McpJsonRpcResponseRecord("2.0", responseId, null, new McpJsonRpcErrorRecord(errorCode, message, errorData));
         return ResponseEntity.status(httpStatus).contentType(MediaType.APPLICATION_JSON).body(responseRecord);
+    }
+
+    private boolean isValidRequestId(JsonNode requestId) {
+        return Objects.nonNull(requestId) && (requestId.isTextual() || requestId.isIntegralNumber());
     }
 
     private boolean hasValidModernMetadata(McpJsonRpcRequestRecord jsonRpcRequestRecord) {

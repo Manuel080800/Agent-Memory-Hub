@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.NullNode;
 import io.agentmemoryhub.api.common.McpEndpointType;
 import io.agentmemoryhub.api.model.McpJsonRpcRequestRecord;
 import io.agentmemoryhub.api.model.McpJsonRpcResponseRecord;
@@ -269,6 +270,32 @@ public class ApiControllerTest {
     }
 
     @Test
+    void mcpTransportRejectsInvalidModernRequestIdsAndMissingRequiredMetadata() {
+        // Verifies modern MCP rejects invalid JSON-RPC IDs and missing client capabilities with protocol errors.
+        var objectMapper = new ObjectMapper();
+        var params = objectMapper.createObjectNode();
+        var metadata = params.putObject("_meta");
+        metadata.put("io.modelcontextprotocol/protocolVersion", "2026-07-28");
+        metadata.putObject("io.modelcontextprotocol/clientCapabilities");
+        var invalidIdRequestRecord = new McpJsonRpcRequestRecord("2.0", NullNode.instance, "server/discover", params);
+        var invalidIdRequest = createModernMcpRequest("server/discover");
+        var invalidMetadataRequest = createModernMcpRequest("server/discover");
+        var invalidIdResponse = mcpTransportController.handleContextRequest(invalidIdRequestRecord, invalidIdRequest, Locale.ENGLISH);
+
+        var missingCapabilitiesParams = objectMapper.createObjectNode();
+        missingCapabilitiesParams.putObject("_meta").put("io.modelcontextprotocol/protocolVersion", "2026-07-28");
+        var invalidMetadataRequestRecord = new McpJsonRpcRequestRecord("2.0", objectMapper.valueToTree(1), "server/discover", missingCapabilitiesParams);
+        var invalidMetadataResponse = mcpTransportController.handleContextRequest(invalidMetadataRequestRecord, invalidMetadataRequest, Locale.ENGLISH);
+
+        assertEquals(400, invalidIdResponse.getStatusCode().value());
+        assertEquals(-32600, ((McpJsonRpcResponseRecord) invalidIdResponse.getBody()).error().code());
+        assertEquals(400, invalidMetadataResponse.getStatusCode().value());
+        assertEquals(-32602, ((McpJsonRpcResponseRecord) invalidMetadataResponse.getBody()).error().code());
+        verify(mcpProtocolService, never()).handleRequestByEndpointAndRequest(eq(McpEndpointType.CONTEXT), eq(invalidIdRequestRecord), eq(Locale.ENGLISH), eq("2026-07-28"));
+        verify(mcpProtocolService, never()).handleRequestByEndpointAndRequest(eq(McpEndpointType.CONTEXT), eq(invalidMetadataRequestRecord), eq(Locale.ENGLISH), eq("2026-07-28"));
+    }
+
+    @Test
     void contextAndSettingsEndpointsDelegateTheRequestedProject() {
         // Verifies context and settings handlers forward the route project id to core services.
         contextController.getActiveProfile("project-1");
@@ -299,5 +326,14 @@ public class ApiControllerTest {
 
         assertEquals("NOT_FOUND", exception.getCode());
         verify(memoryService, never()).listMemoriesByProfileId("profile-2", 0, 20);
+    }
+
+    private MockHttpServletRequest createModernMcpRequest(String method) {
+        var request = new MockHttpServletRequest();
+        request.setSecure(true);
+        request.addHeader(HttpHeaders.HOST, "localhost:8443");
+        request.addHeader("MCP-Protocol-Version", "2026-07-28");
+        request.addHeader("Mcp-Method", method);
+        return request;
     }
 }
