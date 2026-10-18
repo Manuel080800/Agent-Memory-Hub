@@ -9,6 +9,8 @@ description: Use the Agent Memory Hub Tasks server for explicit task continuity,
 
 - Read `.agent-memory-hub/workspace.json` with native workspace file tools when the request belongs to a linked worktree.
 - Treat `projectId` and `taskId` as opaque values. Never derive identifiers from directory names.
+- Call `get_project_settings` with the linked `projectId` before automatic task-context retrieval. If `selectedTaskRetrievalEnabled` is false, do not automatically read task context.
+- After compaction, retrieve task context only when both `compactRecoveryEnabled` and `selectedTaskRetrievalEnabled` are true.
 - Use `inspect_task_continuity` to validate the project, active profile, and selected task before relying on task context.
 - If the project is missing, inactive, or lacks an active profile, state that task context is unavailable. Never invent a replacement.
 - Use `get_task_context` only for a validated selected task. Use task/block full-read tools when returned content is truncated.
@@ -18,7 +20,7 @@ description: Use the Agent Memory Hub Tasks server for explicit task continuity,
 - Task creation is manual by default. Create a task only when the user explicitly asks, or after the user accepts a suggestion allowed by the project's configured mode.
 - `analyze_task_prompt` is read-only and never creates a task. In `SUGGEST` mode, ask at most once for the current new work request and create only after explicit acceptance. In `AUTOMATIC` mode, create only for a moderate or complex new work request and only by calling `create_task`.
 - Obtain the active profile from `inspect_task_continuity`. After `create_task` succeeds, use the returned `taskId` and `get_workspace_reference_guidance`, then use native file tools to write the local reference. The MCP server never writes local files. If file writing fails, report that the task exists but is not selected locally; do not create a duplicate.
-- Update task summaries only on explicit request, unless the project setting enables automatic summary updates and a meaningful decision, objective change, major progress, or important pending item makes an update useful. Do not update once per prompt.
+- Before an automatic summary update, call `get_project_settings`. Update only when `automaticSummaryEnabled` is true and a meaningful decision, objective change, major progress, or important pending item makes an update useful. When it is false, update only on explicit request. Do not update once per prompt.
 - Use task blocks for separate durable details. Never store conversation transcripts as blocks.
 
 ## Destructive actions

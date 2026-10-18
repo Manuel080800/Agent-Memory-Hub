@@ -1,5 +1,6 @@
 package io.agentmemoryhub.api.controller;
 
+import io.agentmemoryhub.core.exception.HubException;
 import io.agentmemoryhub.core.model.record.ProfileInputRecord;
 import io.agentmemoryhub.core.model.record.ProfilePageRecord;
 import io.agentmemoryhub.core.model.record.ProfileRecord;
@@ -10,6 +11,7 @@ import io.agentmemoryhub.core.model.record.UserRecord;
 import io.agentmemoryhub.core.service.profile.ProfileService;
 import io.agentmemoryhub.core.service.project.ProjectService;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,6 +40,11 @@ public class ProjectController {
     @PostMapping("/projects")
     public ProjectRecord createProject(HttpServletRequest httpServletRequest, @RequestBody ProjectInputRecord projectInputRecord) {
         var userRecord = (UserRecord) httpServletRequest.getAttribute("authenticatedUser");
+
+        if (Objects.isNull(projectInputRecord)) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "project");
+        }
+
         var ownedProjectInputRecord = new ProjectInputRecord(projectInputRecord.name(), projectInputRecord.description(), projectInputRecord.enabled(), userRecord.id());
         return projectService.createProjectByInput(ownedProjectInputRecord);
     }

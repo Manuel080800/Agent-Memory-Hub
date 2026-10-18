@@ -10,7 +10,6 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentmemoryhub.api.common.McpEndpointType;
 import io.agentmemoryhub.api.model.McpJsonRpcRequestRecord;
-import io.agentmemoryhub.api.model.McpToolDefinitionRecord;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -78,5 +77,15 @@ class McpProtocolServiceImplTest {
 
         assertEquals(-32602, response.error().code());
         assertFalse(response.result() != null);
+    }
+
+    @Test
+    void rejectsInitializeRequestsWithoutParametersAsInvalidParameters() {
+        // Verifies malformed initialization gets a protocol parameter error instead of an internal error.
+        var request = new McpJsonRpcRequestRecord("2.0", objectMapper.valueToTree(5), "initialize", null);
+
+        var response = mcpProtocolService.handleRequestByEndpointAndRequest(McpEndpointType.CONTEXT, request, Locale.ENGLISH).orElseThrow();
+
+        assertEquals(-32602, response.error().code());
     }
 }

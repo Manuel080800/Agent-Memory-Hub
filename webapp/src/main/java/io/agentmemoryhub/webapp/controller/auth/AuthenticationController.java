@@ -36,7 +36,7 @@ public class AuthenticationController {
     @PostMapping("/login")
     public String loginByEmailAndPassword(@RequestParam String email, @RequestParam String password, @RequestParam String csrfToken, HttpServletRequest httpServletRequest, HttpSession httpSession, Model model, Locale locale) {
         if (!webAppSessionHandler.isValidCsrfToken(httpSession, csrfToken)) {
-            model.addAttribute("errorMessage", messageSource.getMessage("webapp.login.sessionExpired", null, locale));
+            model.addAttribute("errorMessage", messageSource.getMessage("ui.login.sessionExpired", null, locale));
             model.addAttribute("csrfToken", webAppSessionHandler.getOrCreateCsrfToken(httpSession));
             return "login";
         }
@@ -47,7 +47,7 @@ public class AuthenticationController {
             webAppSessionHandler.storeUser(httpSession, userRecord);
             return "redirect:/dashboard";
         } catch (RuntimeException exception) {
-            model.addAttribute("errorMessage", messageSource.getMessage("webapp.login.failed", null, locale));
+            model.addAttribute("errorMessage", messageSource.getMessage("ui.login.failed", null, locale));
             model.addAttribute("csrfToken", webAppSessionHandler.getOrCreateCsrfToken(httpSession));
             return "login";
         }

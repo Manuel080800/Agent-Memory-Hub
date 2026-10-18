@@ -162,8 +162,7 @@ public class TaskServiceImpl implements TaskService {
         var taskBudgetTokens = (int) Math.floor(projectSettings.getContextBudgetTokens() * (100 - projectSettings.getPermanentQuotaPercent()) / 100.0);
         var taskBlockEntityList = taskBlockRepository.findByTaskIdOrderByCreatedAtAscIdAsc(taskId);
         var selectedTaskBlockList = selectRelevantTaskBlocks(taskBlockEntityList, prompt);
-        var taskTextTokens = estimateTokens(task.getTitle() + task.getDescription() + task.getSummary());
-        var taskContextTaskRecord = toTaskContextTaskRecord(task, taskTextTokens > taskBudgetTokens, taskBudgetTokens);
+        var taskContextTaskRecord = toTaskContextTaskRecord(task, taskBudgetTokens);
         var usedBudgetTokens = taskContextTaskRecord.estimatedTokens();
         var omittedCount = Math.max(0, taskBlockEntityList.size() - selectedTaskBlockList.size());
         var taskContextBlockRecordList = new ArrayList<TaskContextBlockRecord>();
@@ -179,12 +178,13 @@ public class TaskServiceImpl implements TaskService {
                 continue;
             }
 
-            if (remainingBudgetTokens < 12) {
+            var abbreviatedContent = truncateText(taskBlock.getContent(), "", remainingBudgetTokens);
+
+            if (abbreviatedContent.isEmpty()) {
                 omittedCount++;
                 continue;
             }
 
-            var abbreviatedContent = truncateText(taskBlock.getContent(), remainingBudgetTokens);
             var abbreviatedEstimatedTokens = estimateTokens(abbreviatedContent);
             var taskContextBlockRecord = new TaskContextBlockRecord(taskBlock.getId(), taskBlock.getTaskId(), abbreviatedContent, taskBlock.getCreatedAt(), taskBlock.getUpdatedAt(), taskBlock.getVersion(), true, abbreviatedEstimatedTokens, "get_task_block");
             taskContextBlockRecordList.add(taskContextBlockRecord);
@@ -192,7 +192,7 @@ public class TaskServiceImpl implements TaskService {
         }
 
         var truncated = taskContextTaskRecord.truncated() || taskContextBlockRecordList.stream().anyMatch(TaskContextBlockRecord::truncated) || omittedCount > 0;
-        return new TaskContextRecord(taskContextTaskRecord, List.copyOf(taskContextBlockRecordList), true, Math.min(usedBudgetTokens, taskBudgetTokens), truncated, omittedCount, taskBudgetTokens);
+        return new TaskContextRecord(taskContextTaskRecord, List.copyOf(taskContextBlockRecordList), true, usedBudgetTokens, truncated, omittedCount, taskBudgetTokens);
     }
 
     @Override
@@ -275,6 +275,10 @@ public class TaskServiceImpl implements TaskService {
     private void validateTaskInput(TaskInputRecord taskInputRecord, boolean create) {
         if (Objects.isNull(taskInputRecord)) {
             throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "task");
+        }
+
+        if (!create && Objects.isNull(taskInputRecord.title()) && Objects.isNull(taskInputRecord.description()) && Objects.isNull(taskInputRecord.summary())) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "changes");
         }
 
         if (create && (ValidateUtils.isInvalidString(taskInputRecord.title()))) {
@@ -407,35 +411,50 @@ public class TaskServiceImpl implements TaskService {
         return (int) Math.ceil(Math.ceil(characterCount / 3.0) * 1.1);
     }
 
-    private String truncateText(String text, int tokenBudget) {
-        var maximumCharacters = Math.max(0, (int) Math.floor(tokenBudget * 30.0 / 11.0));
+    private String truncateText(String text, String prefix, int tokenBudget) {
         var characterCount = text.codePointCount(0, text.length());
 
-        if (characterCount <= maximumCharacters) {
+        if (estimateTokens(prefix + text) <= tokenBudget) {
             return text;
         }
 
-        if (maximumCharacters <= 1) {
-            return "…";
+        var minimumCharacterCount = 0;
+        var maximumCharacterCount = characterCount;
+
+        while (minimumCharacterCount < maximumCharacterCount) {
+            var candidateCharacterCount = (minimumCharacterCount + maximumCharacterCount + 1) / 2;
+            var candidateEndIndex = text.offsetByCodePoints(0, candidateCharacterCount);
+            var candidateText = text.substring(0, candidateEndIndex) + "…";
+
+            if (estimateTokens(prefix + candidateText) <= tokenBudget) {
+                minimumCharacterCount = candidateCharacterCount;
+            } else {
+                maximumCharacterCount = candidateCharacterCount - 1;
+            }
         }
 
-        var finalIndex = text.offsetByCodePoints(0, maximumCharacters - 1);
+        if (minimumCharacterCount == 0) {
+            return estimateTokens(prefix + "…") <= tokenBudget ? "…" : "";
+        }
+
+        var finalIndex = text.offsetByCodePoints(0, minimumCharacterCount);
         return text.substring(0, finalIndex) + "…";
     }
 
-    private TaskContextTaskRecord toTaskContextTaskRecord(Task task, boolean truncated, int tokenBudget) {
+    private TaskContextTaskRecord toTaskContextTaskRecord(Task task, int tokenBudget) {
         var totalTokens = estimateTokens(task.getTitle() + task.getDescription() + task.getSummary());
 
         if (totalTokens <= tokenBudget) {
             return new TaskContextTaskRecord(task.getId(), task.getProfileId(), task.getTitle(), task.getDescription(), task.getSummary(), task.getCreatedAt(), task.getUpdatedAt(), task.getVersion(), false, totalTokens, null);
         }
 
-        var contentBudget = Math.max(0, tokenBudget - estimateTokens(task.getTitle()));
-        var abbreviatedDescription = truncateText(task.getDescription(), contentBudget / 2);
-        var usedTokens = estimateTokens(task.getTitle() + abbreviatedDescription);
-        var abbreviatedSummary = truncateText(task.getSummary(), Math.max(0, tokenBudget - usedTokens));
-        var estimatedTokens = estimateTokens(task.getTitle() + abbreviatedDescription + abbreviatedSummary);
-        return new TaskContextTaskRecord(task.getId(), task.getProfileId(), task.getTitle(), abbreviatedDescription, abbreviatedSummary, task.getCreatedAt(), task.getUpdatedAt(), task.getVersion(), true, Math.min(estimatedTokens, tokenBudget), "get_task");
+        var abbreviatedTitle = truncateText(task.getTitle(), "", tokenBudget);
+        var titleTokens = estimateTokens(abbreviatedTitle);
+        var descriptionBudget = titleTokens + Math.max(0, (tokenBudget - titleTokens) / 2);
+        var abbreviatedDescription = truncateText(task.getDescription(), abbreviatedTitle, descriptionBudget);
+        var abbreviatedSummary = truncateText(task.getSummary(), abbreviatedTitle + abbreviatedDescription, tokenBudget);
+        var estimatedTokens = estimateTokens(abbreviatedTitle + abbreviatedDescription + abbreviatedSummary);
+        return new TaskContextTaskRecord(task.getId(), task.getProfileId(), abbreviatedTitle, abbreviatedDescription, abbreviatedSummary, task.getCreatedAt(), task.getUpdatedAt(), task.getVersion(), true, estimatedTokens, "get_task");
     }
 
     private TaskRecord toTaskRecord(Task task) {

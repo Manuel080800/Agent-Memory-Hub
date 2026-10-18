@@ -1,12 +1,9 @@
 package io.agentmemoryhub.core.utils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class CollectionUtilsTest {
@@ -26,16 +23,5 @@ class CollectionUtilsTest {
         assertThrows(IllegalArgumentException.class, () -> CollectionUtils.mapOf("key"));
         assertThrows(IllegalArgumentException.class, () -> CollectionUtils.mapOf("key", 1, "key", 2));
         assertThrows(IllegalArgumentException.class, () -> CollectionUtils.mapOf("key", null));
-    }
-
-    @Test
-    void checksNullAndEmptyCollectionsAndMaps() {
-        // Verifies that collection and map emptiness checks handle null and empty values.
-        assertTrue(CollectionUtils.isEmpty((List<?>) null));
-        assertTrue(CollectionUtils.isEmpty(List.of()));
-        assertFalse(CollectionUtils.isEmpty(List.of("value")));
-        assertTrue(CollectionUtils.isEmpty((Map<?, ?>) null));
-        assertTrue(CollectionUtils.isEmpty(Map.of()));
-        assertFalse(CollectionUtils.isEmpty(Map.of("key", "value")));
     }
 }

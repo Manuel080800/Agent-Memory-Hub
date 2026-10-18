@@ -6,17 +6,6 @@
         "matcher": "startup|resume|compact",
         "hooks": [
           {
-            "type": "mcp_tool",
-            "server": "agent-memory-hub-context",
-            "tool": "list_projects",
-            "input": {
-              "page": 0,
-              "pageSize": 20
-            },
-            "timeout": 10,
-            "statusMessage": "Consultando proyectos locales de Agent Memory Hub"
-          },
-          {
             "type": "command",
             "command": "python3 \"${PLUGIN_ROOT}/hooks/context_guidance.py\"",
             "timeout": 5

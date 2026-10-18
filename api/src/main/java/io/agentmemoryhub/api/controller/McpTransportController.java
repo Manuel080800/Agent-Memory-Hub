@@ -2,7 +2,6 @@ package io.agentmemoryhub.api.controller;
 
 import io.agentmemoryhub.api.common.McpEndpointType;
 import io.agentmemoryhub.api.model.McpJsonRpcRequestRecord;
-import io.agentmemoryhub.api.model.McpJsonRpcResponseRecord;
 import io.agentmemoryhub.api.service.McpProtocolService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;

@@ -31,7 +31,7 @@ codex plugin marketplace add ./codex-plugin
 
 Después, instala **Agent Memory Hub Context**, **Agent Memory Hub Tasks**, o ambos desde el directorio de plugins de Codex. Cada uno se puede activar o retirar por separado. Registrar el marketplace cambia la configuración de Codex solo cuando ejecutes explícitamente el comando; esta implementación no lo ejecuta ni modifica tu configuración personal.
 
-Los hooks empaquetados requieren revisión y confianza de Codex al instalarse. El plugin Context hace una lectura inicial de proyectos mediante su propio MCP; ambos conjuntos de hooks también aportan orientación para sus funciones. Los hooks no crean tareas, no escriben en el Hub y no leen ni escriben archivos del workspace por su cuenta.
+Los hooks empaquetados requieren revisión y confianza de Codex al instalarse. Ambos conjuntos de hooks aportan orientación; después de leer la referencia local, Codex consulta la configuración y los datos del proyecto vinculado mediante el MCP correspondiente. No se listan proyectos al iniciar ni se elige uno automáticamente. Los hooks no crean tareas, no escriben en el Hub y no leen ni escriben archivos del workspace por su cuenta.
 
 La guía oficial de plugins explica el registro de un marketplace local, la instalación desde el directorio de plugins y la revisión de hooks: [Package your plugin](https://developers.openai.com/plugins/build/plugins).
 

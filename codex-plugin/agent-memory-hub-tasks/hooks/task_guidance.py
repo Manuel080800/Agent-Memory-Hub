@@ -10,8 +10,9 @@ def main():
         additional_context = (
             "For work linked to Agent Memory Hub, use the Tasks MCP server only for temporary "
             "continuity. Read the project's taskId from .agent-memory-hub/workspace.json with "
-            "native file tools and validate it with inspect_task_continuity. Never infer project "
-            "or task identifiers, and do not create a task from a hook."
+            "native file tools, check get_project_settings, and validate it with inspect_task_continuity. "
+            "Only retrieve task context automatically when selected-task retrieval and compact recovery "
+            "are enabled. Never infer project or task identifiers, and do not create a task from a hook."
         )
         print(json.dumps({
             "hookSpecificOutput": {
@@ -25,7 +26,8 @@ def main():
         additional_context = (
             "For a linked Agent Memory Hub project, use analyze_task_prompt only when task "
             "creation is relevant. Analysis is read-only. Follow the project's MANUAL, SUGGEST, "
-            "or explicitly enabled AUTOMATIC mode; never create a task merely because this hook ran."
+            "or explicitly enabled AUTOMATIC mode; check get_project_settings before automatic summary "
+            "updates. Never create a task merely because this hook ran."
         )
         print(json.dumps({
             "hookSpecificOutput": {
@@ -42,8 +44,9 @@ def main():
         )
     elif event == "PostCompact":
         system_message = (
-            "After compaction, reread the local workspace reference and validate any selected task "
-            "through the Tasks MCP server. State when the Hub is unavailable."
+            "After compaction, reread the local workspace reference and project settings, then validate "
+            "any selected task through the Tasks MCP server. Retrieve task context only when compact "
+            "recovery and selected-task retrieval are enabled. State when the Hub is unavailable."
         )
     elif event == "Stop":
         system_message = (

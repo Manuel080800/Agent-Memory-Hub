@@ -100,11 +100,23 @@ public class SkillServiceImpl implements SkillService {
             throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "skill");
         }
 
+        if (!create && hasNoSkillChanges(skillInputRecord)) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "changes");
+        }
+
         if (create && (ValidateUtils.isInvalidString(skillInputRecord.name()))) {
             throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "name");
         }
 
         if (create && (ValidateUtils.isInvalidString(skillInputRecord.instructions()))) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "instructions");
+        }
+
+        if (!create && Objects.nonNull(skillInputRecord.name()) && ValidateUtils.isInvalidString(skillInputRecord.name())) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "name");
+        }
+
+        if (!create && Objects.nonNull(skillInputRecord.instructions()) && ValidateUtils.isInvalidString(skillInputRecord.instructions())) {
             throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "instructions");
         }
     }
@@ -133,6 +145,10 @@ public class SkillServiceImpl implements SkillService {
         if (Objects.nonNull(skillInputRecord.enabled())) {
             skill.setEnabled(skillInputRecord.enabled());
         }
+    }
+
+    private boolean hasNoSkillChanges(SkillInputRecord skillInputRecord) {
+        return Objects.isNull(skillInputRecord.name()) && Objects.isNull(skillInputRecord.description()) && Objects.isNull(skillInputRecord.instructions()) && Objects.isNull(skillInputRecord.tags()) && Objects.isNull(skillInputRecord.applicationMode()) && Objects.isNull(skillInputRecord.enabled());
     }
 
     private SkillRecord toSkillRecord(Skill skill) {

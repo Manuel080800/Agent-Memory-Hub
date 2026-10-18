@@ -3,7 +3,6 @@ package io.agentmemoryhub.api.interceptor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentmemoryhub.core.common.ProjectRole;
 import io.agentmemoryhub.core.dao.ProjectMemberDAO;
-import io.agentmemoryhub.core.exception.HubException;
 import io.agentmemoryhub.core.model.record.UserRecord;
 import io.agentmemoryhub.core.service.auth.AuthenticationService;
 import jakarta.servlet.http.HttpServletRequest;

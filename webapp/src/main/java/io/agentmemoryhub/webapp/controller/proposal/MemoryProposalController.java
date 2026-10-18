@@ -6,7 +6,6 @@ import io.agentmemoryhub.core.model.record.MemoryProposalInputRecord;
 import io.agentmemoryhub.core.model.record.MemoryProposalPageRecord;
 import io.agentmemoryhub.core.model.record.MemoryProposalRecord;
 import io.agentmemoryhub.core.model.record.ProposalApprovalInputRecord;
-import io.agentmemoryhub.core.model.record.ProfileRecord;
 import io.agentmemoryhub.core.model.record.TaskRecord;
 import io.agentmemoryhub.core.service.profile.ProfileService;
 import io.agentmemoryhub.core.service.proposal.MemoryProposalService;
@@ -54,6 +53,11 @@ public class MemoryProposalController {
     @PostMapping("/{proposalId}/approve")
     public ResponseEntity<?> approveMemoryProposal(@PathVariable String projectId, @PathVariable String profileId, @PathVariable String taskId, @PathVariable String proposalId, @RequestBody ProposalApprovalInputRecord proposalApprovalInputRecord) {
         validateProposalRelation(projectId, profileId, taskId, proposalId);
+
+        if (proposalApprovalInputRecord == null) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "title");
+        }
+
         var memoryInputRecord = new MemoryInputRecord(proposalApprovalInputRecord.title(), proposalApprovalInputRecord.content(), proposalApprovalInputRecord.tags(), proposalApprovalInputRecord.applicationMode(), true);
         return ResponseEntity.ok(memoryProposalService.approveMemoryProposalById(proposalId, memoryInputRecord));
     }

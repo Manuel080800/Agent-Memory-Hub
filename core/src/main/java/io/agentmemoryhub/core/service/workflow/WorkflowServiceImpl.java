@@ -98,11 +98,23 @@ public class WorkflowServiceImpl implements WorkflowService {
             throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "workflow");
         }
 
+        if (!create && hasNoWorkflowChanges(workflowInputRecord)) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "changes");
+        }
+
         if (create && (ValidateUtils.isInvalidString(workflowInputRecord.name()))) {
             throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "name");
         }
 
         if (create && (ValidateUtils.isInvalidString(workflowInputRecord.instructions()))) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "instructions");
+        }
+
+        if (!create && Objects.nonNull(workflowInputRecord.name()) && ValidateUtils.isInvalidString(workflowInputRecord.name())) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "name");
+        }
+
+        if (!create && Objects.nonNull(workflowInputRecord.instructions()) && ValidateUtils.isInvalidString(workflowInputRecord.instructions())) {
             throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "instructions");
         }
     }
@@ -123,6 +135,10 @@ public class WorkflowServiceImpl implements WorkflowService {
         if (Objects.nonNull(workflowInputRecord.enabled())) {
             workflow.setEnabled(workflowInputRecord.enabled());
         }
+    }
+
+    private boolean hasNoWorkflowChanges(WorkflowInputRecord workflowInputRecord) {
+        return Objects.isNull(workflowInputRecord.name()) && Objects.isNull(workflowInputRecord.description()) && Objects.isNull(workflowInputRecord.instructions()) && Objects.isNull(workflowInputRecord.enabled());
     }
 
     private WorkflowRecord toWorkflowRecord(Workflow workflow) {

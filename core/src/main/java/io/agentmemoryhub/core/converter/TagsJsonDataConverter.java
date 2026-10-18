@@ -8,7 +8,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -36,7 +35,7 @@ public class TagsJsonDataConverter {
         }
     }
 
-    public List<String> normalizeTags(List<String> tagsList) {
+    private List<String> normalizeTags(List<String> tagsList) {
         if (Objects.isNull(tagsList)) {
             return List.of();
         }

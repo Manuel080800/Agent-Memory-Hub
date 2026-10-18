@@ -10,6 +10,7 @@ import io.agentmemoryhub.core.model.record.WorkflowInputRecord;
 import io.agentmemoryhub.core.model.record.WorkflowPageRecord;
 import io.agentmemoryhub.core.model.record.WorkflowRecord;
 import io.agentmemoryhub.core.service.memory.MemoryService;
+import io.agentmemoryhub.core.service.profile.ProfileService;
 import io.agentmemoryhub.core.service.skill.SkillService;
 import io.agentmemoryhub.core.service.workflow.WorkflowService;
 import lombok.RequiredArgsConstructor;
@@ -28,82 +29,102 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/projects/{projectId}/profiles/{profileId}")
 public class KnowledgeController {
+    private final ProfileService profileService;
     private final SkillService skillService;
     private final WorkflowService workflowService;
     private final MemoryService memoryService;
 
     @GetMapping("/skills")
-    public SkillPageRecord listSkills(@PathVariable String profileId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int pageSize) {
+    public SkillPageRecord listSkills(@PathVariable String projectId, @PathVariable String profileId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int pageSize) {
+        validateProfileBelongsToProject(projectId, profileId);
         return skillService.listSkillsByProfileId(profileId, page, pageSize);
     }
 
     @PostMapping("/skills")
-    public SkillRecord createSkill(@PathVariable String profileId, @RequestHeader(name = "Idempotency-Key", required = false) String requestId, @RequestBody SkillInputRecord skillInputRecord) {
+    public SkillRecord createSkill(@PathVariable String projectId, @PathVariable String profileId, @RequestHeader(name = "Idempotency-Key", required = false) String requestId, @RequestBody SkillInputRecord skillInputRecord) {
+        validateProfileBelongsToProject(projectId, profileId);
         return skillService.createSkillByProfileIdAndInput(profileId, skillInputRecord, requestId);
     }
 
     @GetMapping("/skills/{skillId}")
-    public SkillRecord getSkill(@PathVariable String profileId, @PathVariable String skillId) {
+    public SkillRecord getSkill(@PathVariable String projectId, @PathVariable String profileId, @PathVariable String skillId) {
+        validateProfileBelongsToProject(projectId, profileId);
         return skillService.getSkillByIdAndProfileId(skillId, profileId);
     }
 
     @PutMapping("/skills/{skillId}")
-    public SkillRecord updateSkill(@PathVariable String profileId, @PathVariable String skillId, @RequestHeader(name = "If-Match", required = false) Long expectedVersion, @RequestBody SkillInputRecord skillInputRecord) {
+    public SkillRecord updateSkill(@PathVariable String projectId, @PathVariable String profileId, @PathVariable String skillId, @RequestHeader(name = "If-Match", required = false) Long expectedVersion, @RequestBody SkillInputRecord skillInputRecord) {
+        validateProfileBelongsToProject(projectId, profileId);
         return skillService.updateSkillByIdAndProfileId(skillId, profileId, skillInputRecord, expectedVersion);
     }
 
     @DeleteMapping("/skills/{skillId}")
-    public void deleteSkill(@PathVariable String profileId, @PathVariable String skillId, @RequestParam(defaultValue = "false") boolean confirm) {
+    public void deleteSkill(@PathVariable String projectId, @PathVariable String profileId, @PathVariable String skillId, @RequestParam(defaultValue = "false") boolean confirm) {
+        validateProfileBelongsToProject(projectId, profileId);
         skillService.deleteSkillByIdAndProfileId(skillId, profileId, confirm);
     }
 
     @GetMapping("/workflows")
-    public WorkflowPageRecord listWorkflows(@PathVariable String profileId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int pageSize) {
+    public WorkflowPageRecord listWorkflows(@PathVariable String projectId, @PathVariable String profileId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int pageSize) {
+        validateProfileBelongsToProject(projectId, profileId);
         return workflowService.listWorkflowsByProfileId(profileId, page, pageSize);
     }
 
     @PostMapping("/workflows")
-    public WorkflowRecord createWorkflow(@PathVariable String profileId, @RequestHeader(name = "Idempotency-Key", required = false) String requestId, @RequestBody WorkflowInputRecord workflowInputRecord) {
+    public WorkflowRecord createWorkflow(@PathVariable String projectId, @PathVariable String profileId, @RequestHeader(name = "Idempotency-Key", required = false) String requestId, @RequestBody WorkflowInputRecord workflowInputRecord) {
+        validateProfileBelongsToProject(projectId, profileId);
         return workflowService.createWorkflowByProfileIdAndInput(profileId, workflowInputRecord, requestId);
     }
 
     @GetMapping("/workflows/{workflowId}")
-    public WorkflowRecord getWorkflow(@PathVariable String profileId, @PathVariable String workflowId) {
+    public WorkflowRecord getWorkflow(@PathVariable String projectId, @PathVariable String profileId, @PathVariable String workflowId) {
+        validateProfileBelongsToProject(projectId, profileId);
         return workflowService.getWorkflowByIdAndProfileId(workflowId, profileId);
     }
 
     @PutMapping("/workflows/{workflowId}")
-    public WorkflowRecord updateWorkflow(@PathVariable String profileId, @PathVariable String workflowId, @RequestHeader(name = "If-Match", required = false) Long expectedVersion, @RequestBody WorkflowInputRecord workflowInputRecord) {
+    public WorkflowRecord updateWorkflow(@PathVariable String projectId, @PathVariable String profileId, @PathVariable String workflowId, @RequestHeader(name = "If-Match", required = false) Long expectedVersion, @RequestBody WorkflowInputRecord workflowInputRecord) {
+        validateProfileBelongsToProject(projectId, profileId);
         return workflowService.updateWorkflowByIdAndProfileId(workflowId, profileId, workflowInputRecord, expectedVersion);
     }
 
     @DeleteMapping("/workflows/{workflowId}")
-    public void deleteWorkflow(@PathVariable String profileId, @PathVariable String workflowId, @RequestParam(defaultValue = "false") boolean confirm) {
+    public void deleteWorkflow(@PathVariable String projectId, @PathVariable String profileId, @PathVariable String workflowId, @RequestParam(defaultValue = "false") boolean confirm) {
+        validateProfileBelongsToProject(projectId, profileId);
         workflowService.deleteWorkflowByIdAndProfileId(workflowId, profileId, confirm);
     }
 
     @GetMapping("/memories")
-    public MemoryPageRecord listMemories(@PathVariable String profileId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int pageSize) {
+    public MemoryPageRecord listMemories(@PathVariable String projectId, @PathVariable String profileId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int pageSize) {
+        validateProfileBelongsToProject(projectId, profileId);
         return memoryService.listMemoriesByProfileId(profileId, page, pageSize);
     }
 
     @PostMapping("/memories")
-    public MemoryRecord createMemory(@PathVariable String profileId, @RequestHeader(name = "Idempotency-Key", required = false) String requestId, @RequestBody MemoryInputRecord memoryInputRecord) {
+    public MemoryRecord createMemory(@PathVariable String projectId, @PathVariable String profileId, @RequestHeader(name = "Idempotency-Key", required = false) String requestId, @RequestBody MemoryInputRecord memoryInputRecord) {
+        validateProfileBelongsToProject(projectId, profileId);
         return memoryService.createMemoryByProfileIdAndInput(profileId, memoryInputRecord, requestId);
     }
 
     @GetMapping("/memories/{memoryId}")
-    public MemoryRecord getMemory(@PathVariable String profileId, @PathVariable String memoryId) {
+    public MemoryRecord getMemory(@PathVariable String projectId, @PathVariable String profileId, @PathVariable String memoryId) {
+        validateProfileBelongsToProject(projectId, profileId);
         return memoryService.getMemoryByIdAndProfileId(memoryId, profileId);
     }
 
     @PutMapping("/memories/{memoryId}")
-    public MemoryRecord updateMemory(@PathVariable String profileId, @PathVariable String memoryId, @RequestHeader(name = "If-Match", required = false) Long expectedVersion, @RequestBody MemoryInputRecord memoryInputRecord) {
+    public MemoryRecord updateMemory(@PathVariable String projectId, @PathVariable String profileId, @PathVariable String memoryId, @RequestHeader(name = "If-Match", required = false) Long expectedVersion, @RequestBody MemoryInputRecord memoryInputRecord) {
+        validateProfileBelongsToProject(projectId, profileId);
         return memoryService.updateMemoryByIdAndProfileId(memoryId, profileId, memoryInputRecord, expectedVersion);
     }
 
     @DeleteMapping("/memories/{memoryId}")
-    public void deleteMemory(@PathVariable String profileId, @PathVariable String memoryId, @RequestParam(defaultValue = "false") boolean confirm) {
+    public void deleteMemory(@PathVariable String projectId, @PathVariable String profileId, @PathVariable String memoryId, @RequestParam(defaultValue = "false") boolean confirm) {
+        validateProfileBelongsToProject(projectId, profileId);
         memoryService.deleteMemoryByIdAndProfileId(memoryId, profileId, confirm);
+    }
+
+    private void validateProfileBelongsToProject(String projectId, String profileId) {
+        profileService.getProfileByIdAndProjectId(profileId, projectId);
     }
 }

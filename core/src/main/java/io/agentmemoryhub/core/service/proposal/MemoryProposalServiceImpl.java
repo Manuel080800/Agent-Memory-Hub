@@ -174,11 +174,23 @@ public class MemoryProposalServiceImpl implements MemoryProposalService {
             throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "proposal");
         }
 
+        if (!create && hasNoMemoryProposalChanges(memoryProposalInputRecord)) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "changes");
+        }
+
         if (create && (ValidateUtils.isInvalidString(memoryProposalInputRecord.proposedContent()))) {
             throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "proposedContent");
         }
 
         if (create && (ValidateUtils.isInvalidString(memoryProposalInputRecord.reason()))) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "reason");
+        }
+
+        if (!create && Objects.nonNull(memoryProposalInputRecord.proposedContent()) && ValidateUtils.isInvalidString(memoryProposalInputRecord.proposedContent())) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "proposedContent");
+        }
+
+        if (!create && Objects.nonNull(memoryProposalInputRecord.reason()) && ValidateUtils.isInvalidString(memoryProposalInputRecord.reason())) {
             throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "reason");
         }
     }
@@ -191,6 +203,14 @@ public class MemoryProposalServiceImpl implements MemoryProposalService {
         if (ValidateUtils.isInvalidString(memoryInputRecord.title())) {
             throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "title");
         }
+
+        if (Objects.nonNull(memoryInputRecord.content()) && ValidateUtils.isInvalidString(memoryInputRecord.content())) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "content");
+        }
+    }
+
+    private boolean hasNoMemoryProposalChanges(MemoryProposalInputRecord memoryProposalInputRecord) {
+        return Objects.isNull(memoryProposalInputRecord.proposedContent()) && Objects.isNull(memoryProposalInputRecord.reason()) && Objects.isNull(memoryProposalInputRecord.tags());
     }
 
     private MemoryProposalRecord toMemoryProposalRecord(MemoryProposal memoryProposal) {

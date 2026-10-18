@@ -3,7 +3,6 @@ package io.agentmemoryhub.core.dao;
 import io.agentmemoryhub.core.model.record.PasswordCredentialRecord;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;

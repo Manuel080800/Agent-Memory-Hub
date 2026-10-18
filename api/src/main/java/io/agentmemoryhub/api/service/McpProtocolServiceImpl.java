@@ -4,7 +4,6 @@ import io.agentmemoryhub.api.common.McpEndpointType;
 import io.agentmemoryhub.api.model.McpJsonRpcErrorRecord;
 import io.agentmemoryhub.api.model.McpJsonRpcRequestRecord;
 import io.agentmemoryhub.api.model.McpJsonRpcResponseRecord;
-import io.agentmemoryhub.api.model.McpToolResultRecord;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -32,6 +31,11 @@ public class McpProtocolServiceImpl implements McpProtocolService {
         if (jsonRpcRequestRecord.id() == null) {
             return Optional.empty();
         }
+
+        if ("initialize".equals(jsonRpcRequestRecord.method()) && jsonRpcRequestRecord.params() == null) {
+            return createErrorResponse(jsonRpcRequestRecord, -32602, "mcp.error.invalidParameters", locale);
+        }
+
         if (jsonRpcRequestRecord.params() != null && !jsonRpcRequestRecord.params().isObject()) {
             return createErrorResponse(jsonRpcRequestRecord, -32602, "mcp.error.invalidParameters", locale);
         }

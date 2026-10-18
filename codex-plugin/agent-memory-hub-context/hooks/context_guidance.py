@@ -9,9 +9,10 @@ def main():
     if event == "SessionStart":
         additional_context = (
             "For work associated with Agent Memory Hub, use Codex's native file tools to read "
-            ".agent-memory-hub/workspace.json. Use its projectId to retrieve current permanent "
-            "context through the Agent Memory Hub Context server. The active profile always comes "
-            "from the Hub. Do not invent a project or select a profile automatically."
+            ".agent-memory-hub/workspace.json. Use its projectId to check get_project_settings "
+            "before automatic context retrieval. Retrieve current permanent context through the "
+            "Agent Memory Hub Context server only when project settings allow it. The active profile "
+            "always comes from the Hub. Do not invent a project or select a profile automatically."
         )
         print(json.dumps({
             "hookSpecificOutput": {
@@ -24,8 +25,9 @@ def main():
     if event == "UserPromptSubmit":
         additional_context = (
             "When this request concerns a project linked to Agent Memory Hub, consult its local "
-            "workspace reference with native file tools, then use the Context MCP server's read "
-            "tools for current permanent context. Do not create or change permanent memory from this hook."
+            "workspace reference with native file tools, check project settings, then use the Context "
+            "MCP server's read tools for current permanent context when retrieval is enabled. Do not "
+            "create or change permanent memory from this hook."
         )
         print(json.dumps({
             "hookSpecificOutput": {
@@ -42,9 +44,9 @@ def main():
         )
     elif event == "PostCompact":
         system_message = (
-            "After compaction, reread the local workspace reference and retrieve current permanent "
-            "Hub context through the Context MCP server when this work is linked to a project. State "
-            "when the Hub is unavailable."
+            "After compaction, reread the local workspace reference and project settings. Retrieve "
+            "current permanent Hub context only when compact recovery and context retrieval are enabled. "
+            "State when the Hub is unavailable."
         )
     elif event == "Stop":
         system_message = (

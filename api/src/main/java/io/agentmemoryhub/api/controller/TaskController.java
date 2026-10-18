@@ -6,7 +6,6 @@ import io.agentmemoryhub.core.model.record.MemoryProposalInputRecord;
 import io.agentmemoryhub.core.model.record.MemoryProposalPageRecord;
 import io.agentmemoryhub.core.model.record.MemoryProposalRecord;
 import io.agentmemoryhub.core.model.record.MemoryRecord;
-import io.agentmemoryhub.core.model.record.ProfileRecord;
 import io.agentmemoryhub.core.model.record.ProposalApprovalInputRecord;
 import io.agentmemoryhub.core.model.record.TaskBlockInputRecord;
 import io.agentmemoryhub.core.model.record.TaskBlockPageRecord;
@@ -19,7 +18,6 @@ import io.agentmemoryhub.core.service.profile.ProfileService;
 import io.agentmemoryhub.core.service.proposal.MemoryProposalService;
 import io.agentmemoryhub.core.service.task.TaskBlockService;
 import io.agentmemoryhub.core.service.task.TaskService;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -132,6 +130,11 @@ public class TaskController {
     @PostMapping("/{taskId}/proposals/{proposalId}/approve")
     public MemoryRecord approveProposal(@PathVariable String projectId, @PathVariable String profileId, @PathVariable String taskId, @PathVariable String proposalId, @RequestBody ProposalApprovalInputRecord proposalApprovalInputRecord) {
         validateProposalRelation(projectId, profileId, taskId, proposalId);
+
+        if (proposalApprovalInputRecord == null) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "title");
+        }
+
         var memoryInputRecord = new MemoryInputRecord(proposalApprovalInputRecord.title(), proposalApprovalInputRecord.content(), proposalApprovalInputRecord.tags(), proposalApprovalInputRecord.applicationMode(), true);
         return memoryProposalService.approveMemoryProposalById(proposalId, memoryInputRecord);
     }

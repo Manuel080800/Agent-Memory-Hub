@@ -1,11 +1,13 @@
 package io.agentmemoryhub.webapp.controller.project;
 
+import io.agentmemoryhub.core.exception.HubException;
 import io.agentmemoryhub.core.model.record.ProjectInputRecord;
 import io.agentmemoryhub.core.model.record.ProjectPageRecord;
 import io.agentmemoryhub.core.model.record.ProjectRecord;
 import io.agentmemoryhub.core.service.project.ProjectService;
 import io.agentmemoryhub.webapp.handler.session.WebAppSessionHandler;
 import jakarta.servlet.http.HttpSession;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -35,6 +37,11 @@ public class ProjectController {
     @PostMapping
     public ResponseEntity<ProjectRecord> createProject(HttpSession httpSession, @RequestBody ProjectInputRecord projectInputRecord) {
         var userRecord = webAppSessionHandler.getUser(httpSession);
+
+        if (Objects.isNull(projectInputRecord)) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "project");
+        }
+
         var ownedProjectInputRecord = new ProjectInputRecord(projectInputRecord.name(), projectInputRecord.description(), projectInputRecord.enabled(), userRecord.id());
         return ResponseEntity.ok(projectService.createProjectByInput(ownedProjectInputRecord));
     }

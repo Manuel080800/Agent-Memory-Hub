@@ -100,11 +100,23 @@ public class MemoryServiceImpl implements MemoryService {
             throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "memory");
         }
 
+        if (!create && hasNoMemoryChanges(memoryInputRecord)) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "changes");
+        }
+
         if (create && (ValidateUtils.isInvalidString(memoryInputRecord.title()))) {
             throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "title");
         }
 
         if (create && (ValidateUtils.isInvalidString(memoryInputRecord.content()))) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "content");
+        }
+
+        if (!create && Objects.nonNull(memoryInputRecord.title()) && ValidateUtils.isInvalidString(memoryInputRecord.title())) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "title");
+        }
+
+        if (!create && Objects.nonNull(memoryInputRecord.content()) && ValidateUtils.isInvalidString(memoryInputRecord.content())) {
             throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "content");
         }
     }
@@ -129,6 +141,10 @@ public class MemoryServiceImpl implements MemoryService {
         if (Objects.nonNull(memoryInputRecord.enabled())) {
             memory.setEnabled(memoryInputRecord.enabled());
         }
+    }
+
+    private boolean hasNoMemoryChanges(MemoryInputRecord memoryInputRecord) {
+        return Objects.isNull(memoryInputRecord.title()) && Objects.isNull(memoryInputRecord.content()) && Objects.isNull(memoryInputRecord.tags()) && Objects.isNull(memoryInputRecord.applicationMode()) && Objects.isNull(memoryInputRecord.enabled());
     }
 
     private MemoryRecord toMemoryRecord(Memory memory) {

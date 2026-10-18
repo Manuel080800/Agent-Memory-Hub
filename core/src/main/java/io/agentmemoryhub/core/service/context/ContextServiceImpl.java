@@ -5,7 +5,6 @@ import io.agentmemoryhub.core.common.ConnectionType;
 import io.agentmemoryhub.core.converter.TagsJsonDataConverter;
 import io.agentmemoryhub.core.exception.HubException;
 import io.agentmemoryhub.core.model.domain.Memory;
-import io.agentmemoryhub.core.model.domain.Profile;
 import io.agentmemoryhub.core.model.domain.Project;
 import io.agentmemoryhub.core.model.domain.ProjectSettings;
 import io.agentmemoryhub.core.model.domain.Skill;
@@ -105,16 +104,6 @@ public class ContextServiceImpl implements ContextService {
         var omittedCount = workflowResult.omittedCount() + alwaysSkillResult.omittedCount() + alwaysMemoryResult.omittedCount() + contextualSkillResult.omittedCount() + contextualMemoryResult.omittedCount();
         var truncated = workflowResult.truncated() || alwaysSkillResult.truncated() || alwaysMemoryResult.truncated() || contextualSkillResult.truncated() || contextualMemoryResult.truncated();
 
-        if (truncated) {
-            throw new HubException("TRUNCATED", "error.truncated", 409);
-        }
-
-        var hasContextResource = hasAnyContextResource(workflowEntityList, alwaysSkillList, alwaysMemoryList, contextualSkillList, contextualMemoryList);
-
-        if (permanentBudgetTokens == 0 && hasContextResource) {
-            throw new HubException("CONTEXT_LIMIT", "error.contextLimit", 422);
-        }
-
         return new ProjectContextRecord(projectId, profile.getId(), workflowRecordList, List.copyOf(skillRecordList), List.copyOf(memoryRecordList), totalEstimatedTokens, truncated, omittedCount, permanentBudgetTokens);
     }
 
@@ -211,7 +200,8 @@ public class ContextServiceImpl implements ContextService {
 
         for (var workflow : workflowEntityList) {
             var content = workflow.getInstructions();
-            var estimatedTokens = estimateTokens(workflow.getName() + workflow.getDescription() + content);
+            var resourceMetadata = workflow.getName() + " " + workflow.getDescription() + " ";
+            var estimatedTokens = estimateTokens(resourceMetadata + content);
             var remainingTokens = budgetTokens - usedTokens;
 
             if (estimatedTokens <= remainingTokens) {
@@ -226,10 +216,18 @@ public class ContextServiceImpl implements ContextService {
                 continue;
             }
 
-            var shortenedContent = truncateText(content, remainingTokens);
+            var shortenedContent = truncateText(content, resourceMetadata, remainingTokens);
+
+            if (shortenedContent.isEmpty()) {
+                omittedCount++;
+                truncated = true;
+                continue;
+            }
+
             var resource = toWorkflowContextResource(workflow);
-            resourceList.add(new ContextResourceRecord(resource.resourceType(), resource.id(), resource.name(), resource.title(), resource.description(), null, shortenedContent, List.of(), null, true, estimateTokens(shortenedContent), "get_context_resource"));
-            usedTokens += estimateTokens(shortenedContent);
+            var abbreviatedEstimatedTokens = estimateTokens(resourceMetadata + shortenedContent);
+            resourceList.add(new ContextResourceRecord(resource.resourceType(), resource.id(), resource.name(), resource.title(), resource.description(), null, shortenedContent, List.of(), null, true, abbreviatedEstimatedTokens, "get_context_resource"));
+            usedTokens += abbreviatedEstimatedTokens;
             truncated = true;
         }
 
@@ -243,7 +241,9 @@ public class ContextServiceImpl implements ContextService {
         var truncated = false;
 
         for (var skill : skillEntityList) {
-            var estimatedTokens = estimateTokens(skill.getName() + skill.getDescription() + skill.getInstructions());
+            var tagsList = tagsJsonDataConverter.fromJson(skill.getTagsJson());
+            var resourceMetadata = skill.getName() + " " + skill.getDescription() + " " + String.join(" ", tagsList) + " ";
+            var estimatedTokens = estimateTokens(resourceMetadata + skill.getInstructions());
             var remainingTokens = budgetTokens - usedTokens;
 
             if (estimatedTokens <= remainingTokens) {
@@ -258,10 +258,18 @@ public class ContextServiceImpl implements ContextService {
                 continue;
             }
 
-            var shortenedInstructions = truncateText(skill.getInstructions(), remainingTokens);
+            var shortenedInstructions = truncateText(skill.getInstructions(), resourceMetadata, remainingTokens);
+
+            if (shortenedInstructions.isEmpty()) {
+                omittedCount++;
+                truncated = true;
+                continue;
+            }
+
             var resource = toSkillContextResource(skill);
-            resourceList.add(new ContextResourceRecord(resource.resourceType(), resource.id(), resource.name(), null, resource.description(), null, shortenedInstructions, resource.tags(), resource.applicationMode(), true, estimateTokens(shortenedInstructions), "get_context_resource"));
-            usedTokens += estimateTokens(shortenedInstructions);
+            var abbreviatedEstimatedTokens = estimateTokens(resourceMetadata + shortenedInstructions);
+            resourceList.add(new ContextResourceRecord(resource.resourceType(), resource.id(), resource.name(), null, resource.description(), null, shortenedInstructions, resource.tags(), resource.applicationMode(), true, abbreviatedEstimatedTokens, "get_context_resource"));
+            usedTokens += abbreviatedEstimatedTokens;
             truncated = true;
         }
 
@@ -275,7 +283,9 @@ public class ContextServiceImpl implements ContextService {
         var truncated = false;
 
         for (var memory : memoryEntityList) {
-            var estimatedTokens = estimateTokens(memory.getTitle() + memory.getContent());
+            var tagsList = tagsJsonDataConverter.fromJson(memory.getTagsJson());
+            var resourceMetadata = memory.getTitle() + " " + String.join(" ", tagsList) + " ";
+            var estimatedTokens = estimateTokens(resourceMetadata + memory.getContent());
             var remainingTokens = budgetTokens - usedTokens;
 
             if (estimatedTokens <= remainingTokens) {
@@ -290,10 +300,18 @@ public class ContextServiceImpl implements ContextService {
                 continue;
             }
 
-            var shortenedContent = truncateText(memory.getContent(), remainingTokens);
+            var shortenedContent = truncateText(memory.getContent(), resourceMetadata, remainingTokens);
+
+            if (shortenedContent.isEmpty()) {
+                omittedCount++;
+                truncated = true;
+                continue;
+            }
+
             var resource = toMemoryContextResource(memory);
-            resourceList.add(new ContextResourceRecord(resource.resourceType(), resource.id(), null, resource.title(), null, shortenedContent, null, resource.tags(), resource.applicationMode(), true, estimateTokens(shortenedContent), "get_context_resource"));
-            usedTokens += estimateTokens(shortenedContent);
+            var abbreviatedEstimatedTokens = estimateTokens(resourceMetadata + shortenedContent);
+            resourceList.add(new ContextResourceRecord(resource.resourceType(), resource.id(), null, resource.title(), null, shortenedContent, null, resource.tags(), resource.applicationMode(), true, abbreviatedEstimatedTokens, "get_context_resource"));
+            usedTokens += abbreviatedEstimatedTokens;
             truncated = true;
         }
 
@@ -301,18 +319,20 @@ public class ContextServiceImpl implements ContextService {
     }
 
     private ContextResourceRecord toWorkflowContextResource(Workflow workflow) {
-        var estimatedTokens = estimateTokens(workflow.getName() + workflow.getDescription() + workflow.getInstructions());
+        var estimatedTokens = estimateTokens(workflow.getName() + " " + workflow.getDescription() + " " + workflow.getInstructions());
         return new ContextResourceRecord("WORKFLOW", workflow.getId(), workflow.getName(), null, workflow.getDescription(), null, workflow.getInstructions(), List.of(), null, false, estimatedTokens, null);
     }
 
     private ContextResourceRecord toSkillContextResource(Skill skill) {
-        var estimatedTokens = estimateTokens(skill.getName() + skill.getDescription() + skill.getInstructions());
-        return new ContextResourceRecord("SKILL", skill.getId(), skill.getName(), null, skill.getDescription(), null, skill.getInstructions(), tagsJsonDataConverter.fromJson(skill.getTagsJson()), skill.getApplicationMode(), false, estimatedTokens, null);
+        var tagsList = tagsJsonDataConverter.fromJson(skill.getTagsJson());
+        var estimatedTokens = estimateTokens(skill.getName() + " " + skill.getDescription() + " " + String.join(" ", tagsList) + " " + skill.getInstructions());
+        return new ContextResourceRecord("SKILL", skill.getId(), skill.getName(), null, skill.getDescription(), null, skill.getInstructions(), tagsList, skill.getApplicationMode(), false, estimatedTokens, null);
     }
 
     private ContextResourceRecord toMemoryContextResource(Memory memory) {
-        var estimatedTokens = estimateTokens(memory.getTitle() + memory.getContent());
-        return new ContextResourceRecord("MEMORY", memory.getId(), null, memory.getTitle(), null, memory.getContent(), null, tagsJsonDataConverter.fromJson(memory.getTagsJson()), memory.getApplicationMode(), false, estimatedTokens, null);
+        var tagsList = tagsJsonDataConverter.fromJson(memory.getTagsJson());
+        var estimatedTokens = estimateTokens(memory.getTitle() + " " + String.join(" ", tagsList) + " " + memory.getContent());
+        return new ContextResourceRecord("MEMORY", memory.getId(), null, memory.getTitle(), null, memory.getContent(), null, tagsList, memory.getApplicationMode(), false, estimatedTokens, null);
     }
 
     private int relevanceScore(String content, Set<String> promptWordSet) {
@@ -345,25 +365,33 @@ public class ContextServiceImpl implements ContextService {
         return (int) Math.ceil(Math.ceil(characterCount / 3.0) * 1.1);
     }
 
-    private String truncateText(String text, int tokenBudget) {
-        var maximumCharacters = Math.max(1, (int) Math.floor(tokenBudget * 30.0 / 11.0));
+    private String truncateText(String text, String resourceMetadata, int tokenBudget) {
         var characterCount = text.codePointCount(0, text.length());
 
-        if (characterCount <= maximumCharacters) {
+        if (estimateTokens(resourceMetadata + text) <= tokenBudget) {
             return text;
         }
 
-        var finalIndex = text.offsetByCodePoints(0, maximumCharacters - 1);
-        return text.substring(0, finalIndex) + "…";
-    }
+        var minimumCharacterCount = 0;
+        var maximumCharacterCount = characterCount;
 
-    private boolean hasAnyContextResource(List<?>... contextResourceList) {
-        for (var resourceList : contextResourceList) {
-            if (!resourceList.isEmpty()) {
-                return true;
+        while (minimumCharacterCount < maximumCharacterCount) {
+            var candidateCharacterCount = (minimumCharacterCount + maximumCharacterCount + 1) / 2;
+            var candidateEndIndex = text.offsetByCodePoints(0, candidateCharacterCount);
+            var candidateText = text.substring(0, candidateEndIndex) + "…";
+
+            if (estimateTokens(resourceMetadata + candidateText) <= tokenBudget) {
+                minimumCharacterCount = candidateCharacterCount;
+            } else {
+                maximumCharacterCount = candidateCharacterCount - 1;
             }
         }
 
-        return false;
+        if (minimumCharacterCount == 0) {
+            return estimateTokens(resourceMetadata + "…") <= tokenBudget ? "…" : "";
+        }
+
+        var finalIndex = text.offsetByCodePoints(0, minimumCharacterCount);
+        return text.substring(0, finalIndex) + "…";
     }
 }

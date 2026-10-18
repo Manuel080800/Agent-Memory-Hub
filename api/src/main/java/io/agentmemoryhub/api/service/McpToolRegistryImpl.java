@@ -2,14 +2,14 @@ package io.agentmemoryhub.api.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.agentmemoryhub.api.common.McpEndpointType;
+import io.agentmemoryhub.api.model.McpDeleteResultRecord;
 import io.agentmemoryhub.api.model.McpTextContentRecord;
 import io.agentmemoryhub.api.model.McpToolDefinitionRecord;
 import io.agentmemoryhub.api.model.McpToolResultRecord;
-import io.agentmemoryhub.api.model.McpDeleteResultRecord;
 import io.agentmemoryhub.core.exception.HubException;
 import io.agentmemoryhub.core.model.record.ContextResourceRecord;
+import io.agentmemoryhub.core.model.record.ProjectContextRecord;
 import io.agentmemoryhub.core.model.record.MemoryInputRecord;
 import io.agentmemoryhub.core.model.record.MemoryPageRecord;
 import io.agentmemoryhub.core.model.record.MemoryProposalInputRecord;
@@ -20,19 +20,19 @@ import io.agentmemoryhub.core.model.record.ProfileInputRecord;
 import io.agentmemoryhub.core.model.record.ProfilePageRecord;
 import io.agentmemoryhub.core.model.record.ProfileRecord;
 import io.agentmemoryhub.core.model.record.ProjectInputRecord;
-import io.agentmemoryhub.core.model.record.ProjectContextRecord;
 import io.agentmemoryhub.core.model.record.ProjectPageRecord;
 import io.agentmemoryhub.core.model.record.ProjectRecord;
+import io.agentmemoryhub.core.model.record.ProjectSettingsRecord;
 import io.agentmemoryhub.core.model.record.SkillInputRecord;
 import io.agentmemoryhub.core.model.record.SkillPageRecord;
 import io.agentmemoryhub.core.model.record.SkillRecord;
 import io.agentmemoryhub.core.model.record.TaskBlockInputRecord;
 import io.agentmemoryhub.core.model.record.TaskBlockPageRecord;
 import io.agentmemoryhub.core.model.record.TaskBlockRecord;
+import io.agentmemoryhub.core.model.record.TaskAnalysisRecord;
 import io.agentmemoryhub.core.model.record.TaskContextRecord;
 import io.agentmemoryhub.core.model.record.TaskContinuityRecord;
 import io.agentmemoryhub.core.model.record.TaskCreationResultRecord;
-import io.agentmemoryhub.core.model.record.TaskAnalysisRecord;
 import io.agentmemoryhub.core.model.record.TaskInputRecord;
 import io.agentmemoryhub.core.model.record.TaskPageRecord;
 import io.agentmemoryhub.core.model.record.TaskRecord;
@@ -45,23 +45,24 @@ import io.agentmemoryhub.core.service.memory.MemoryService;
 import io.agentmemoryhub.core.service.profile.ProfileService;
 import io.agentmemoryhub.core.service.project.ProjectService;
 import io.agentmemoryhub.core.service.proposal.MemoryProposalService;
+import io.agentmemoryhub.core.service.settings.ProjectSettingsService;
 import io.agentmemoryhub.core.service.skill.SkillService;
 import io.agentmemoryhub.core.service.task.TaskBlockService;
 import io.agentmemoryhub.core.service.task.TaskService;
 import io.agentmemoryhub.core.service.workflow.WorkflowService;
 import io.agentmemoryhub.core.utils.CollectionUtils;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.time.temporal.TemporalAccessor;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.util.HashSet;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
@@ -71,6 +72,7 @@ import org.springframework.stereotype.Service;
 public class McpToolRegistryImpl implements McpToolRegistry {
     private final ContextService contextService;
     private final ProjectService projectService;
+    private final ProjectSettingsService projectSettingsService;
     private final ProfileService profileService;
     private final SkillService skillService;
     private final WorkflowService workflowService;
@@ -112,6 +114,7 @@ public class McpToolRegistryImpl implements McpToolRegistry {
 
     private List<McpToolDefinitionRecord> createContextToolList() {
         var toolDefinitionRecordList = new ArrayList<McpToolDefinitionRecord>();
+        toolDefinitionRecordList.add(createTool("get_project_settings", "Returns the settings that govern this project's context and task tools.", properties("projectId", stringProperty()), List.of("projectId"), true, false));
         toolDefinitionRecordList.add(createTool("get_active_profile", "Returns the currently selected enabled profile.", properties("projectId", stringProperty()), List.of("projectId"), true, false));
         toolDefinitionRecordList.add(createTool("get_project_context", "Returns permanent context selected for the prompt.", properties("projectId", stringProperty(), "prompt", stringProperty()), List.of("projectId"), true, false));
         toolDefinitionRecordList.add(createTool("get_context_resource", "Returns the full text of one workflow, skill, or memory.", properties("projectId", stringProperty(), "resourceType", enumStringProperty("WORKFLOW", "SKILL", "MEMORY"), "resourceId", stringProperty()), List.of("projectId", "resourceType", "resourceId"), true, false));
@@ -158,6 +161,7 @@ public class McpToolRegistryImpl implements McpToolRegistry {
 
     private List<McpToolDefinitionRecord> createTaskToolList() {
         var toolDefinitionRecordList = new ArrayList<McpToolDefinitionRecord>();
+        toolDefinitionRecordList.add(createTool("get_project_settings", "Returns the settings that govern this project's context and task tools.", properties("projectId", stringProperty()), List.of("projectId"), true, false));
         toolDefinitionRecordList.add(createTool("list_tasks", "Lists tasks belonging to a profile.", paginatedProperties("profileId"), List.of("profileId"), true, false));
         toolDefinitionRecordList.add(createTool("get_task", "Returns one task by its Hub identifier.", properties("taskId", stringProperty()), List.of("taskId"), true, false));
         toolDefinitionRecordList.add(createTool("create_task", "Creates a task in the selected profile; it never writes local files.", properties("profileId", stringProperty(), "title", stringProperty(), "description", stringProperty(), "summary", stringProperty(), "requestId", stringProperty()), List.of("profileId", "title", "description"), false, false));
@@ -241,6 +245,7 @@ public class McpToolRegistryImpl implements McpToolRegistry {
         var dataType = switch (toolName) {
             case "get_active_profile", "get_profile", "create_profile", "update_profile", "select_active_profile" -> ProfileRecord.class;
             case "get_project_context" -> ProjectContextRecord.class;
+            case "get_project_settings" -> ProjectSettingsRecord.class;
             case "get_context_resource" -> ContextResourceRecord.class;
             case "get_project", "create_project", "update_project" -> ProjectRecord.class;
             case "list_projects" -> ProjectPageRecord.class;
@@ -524,6 +529,7 @@ public class McpToolRegistryImpl implements McpToolRegistry {
 
     private Object callContextTool(String toolName, JsonNode arguments) {
         return switch (toolName) {
+            case "get_project_settings" -> projectSettingsService.getProjectSettingsByProjectId(requiredString(arguments, "projectId"));
             case "get_active_profile" -> contextService.getActiveProfileByProjectId(requiredString(arguments, "projectId"));
             case "get_project_context" -> contextService.getProjectContextByProjectIdAndPrompt(requiredString(arguments, "projectId"), optionalString(arguments, "prompt"));
             case "get_context_resource" -> contextService.getContextResourceByProjectIdAndTypeAndResourceId(requiredString(arguments, "projectId"), requiredString(arguments, "resourceType"), requiredString(arguments, "resourceId"));
@@ -564,6 +570,7 @@ public class McpToolRegistryImpl implements McpToolRegistry {
 
     private Object callTaskTool(String toolName, JsonNode arguments, Locale locale) {
         return switch (toolName) {
+            case "get_project_settings" -> projectSettingsService.getProjectSettingsByProjectId(requiredString(arguments, "projectId"));
             case "list_tasks" -> taskService.listTasksByProfileId(requiredString(arguments, "profileId"), optionalInteger(arguments, "page", 0), optionalInteger(arguments, "pageSize", 20));
             case "get_task" -> taskService.getTaskById(requiredString(arguments, "taskId"));
             case "create_task" -> createTask(arguments, locale);

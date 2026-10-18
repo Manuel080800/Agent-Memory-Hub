@@ -8,6 +8,7 @@ import io.agentmemoryhub.core.model.record.ProjectMemberPageRecord;
 import io.agentmemoryhub.core.model.record.ProjectMemberRecord;
 import io.agentmemoryhub.core.repository.ProjectRepository;
 import io.agentmemoryhub.core.repository.UserRepository;
+import io.agentmemoryhub.core.utils.ValidateUtils;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,10 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     public ProjectMemberRecord addProjectMemberByProjectIdAndInput(String projectId, ProjectMemberInputRecord inputRecord) {
         validateProjectExists(projectId);
         validateProjectMemberInput(inputRecord);
+
+        if (ValidateUtils.isInvalidString(inputRecord.userId())) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "userId");
+        }
 
         if (inputRecord.projectRole() == ProjectRole.OWNER) {
             throw new HubException("OPERATION_NOT_ALLOWED", "error.operationNotAllowed", 409);
@@ -84,6 +89,10 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     private void validateProjectMemberInput(ProjectMemberInputRecord inputRecord) {
         if (Objects.isNull(inputRecord) || Objects.isNull(inputRecord.projectRole())) {
             throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "projectRole");
+        }
+
+        if (Objects.nonNull(inputRecord.userId()) && ValidateUtils.isInvalidString(inputRecord.userId())) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "userId");
         }
     }
 

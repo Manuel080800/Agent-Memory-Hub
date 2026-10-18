@@ -97,6 +97,10 @@ public class McpConnectionServiceImpl implements McpConnectionService {
             throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "connection");
         }
 
+        if (!create && Objects.nonNull(inputRecord.name()) && ValidateUtils.isInvalidString(inputRecord.name())) {
+            throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "name");
+        }
+
         if (create && hasInvalidCreateFields(inputRecord)) {
             throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "connection");
         }

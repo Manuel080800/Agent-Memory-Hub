@@ -7,7 +7,6 @@ import io.agentmemoryhub.core.service.auth.AuthenticationService;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.Objects;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;

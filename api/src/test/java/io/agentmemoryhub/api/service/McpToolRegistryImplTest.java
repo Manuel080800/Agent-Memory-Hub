@@ -5,16 +5,22 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentmemoryhub.api.common.McpEndpointType;
 import io.agentmemoryhub.api.model.McpToolDefinitionRecord;
+import io.agentmemoryhub.core.common.TaskCreationMode;
+import io.agentmemoryhub.core.model.record.ProjectSettingsRecord;
 import io.agentmemoryhub.core.service.context.ContextService;
 import io.agentmemoryhub.core.service.memory.MemoryService;
 import io.agentmemoryhub.core.service.profile.ProfileService;
 import io.agentmemoryhub.core.service.project.ProjectService;
 import io.agentmemoryhub.core.service.proposal.MemoryProposalService;
+import io.agentmemoryhub.core.service.settings.ProjectSettingsService;
 import io.agentmemoryhub.core.service.skill.SkillService;
 import io.agentmemoryhub.core.service.task.TaskBlockService;
 import io.agentmemoryhub.core.service.task.TaskService;
@@ -30,6 +36,7 @@ class McpToolRegistryImplTest {
 
     private ContextService contextService;
     private ProjectService projectService;
+    private ProjectSettingsService projectSettingsService;
     private ProfileService profileService;
     private SkillService skillService;
     private WorkflowService workflowService;
@@ -43,6 +50,7 @@ class McpToolRegistryImplTest {
     void setUp() {
         contextService = mock(ContextService.class);
         projectService = mock(ProjectService.class);
+        projectSettingsService = mock(ProjectSettingsService.class);
         profileService = mock(ProfileService.class);
         skillService = mock(SkillService.class);
         workflowService = mock(WorkflowService.class);
@@ -50,7 +58,7 @@ class McpToolRegistryImplTest {
         memoryProposalService = mock(MemoryProposalService.class);
         taskService = mock(TaskService.class);
         taskBlockService = mock(TaskBlockService.class);
-        mcpToolRegistry = new McpToolRegistryImpl(contextService, projectService, profileService, skillService, workflowService, memoryService, memoryProposalService, taskService, taskBlockService, new ObjectMapper(), new StaticMessageSource());
+        mcpToolRegistry = new McpToolRegistryImpl(contextService, projectService, projectSettingsService, profileService, skillService, workflowService, memoryService, memoryProposalService, taskService, taskBlockService, new ObjectMapper(), new StaticMessageSource());
     }
 
     @Test
@@ -59,8 +67,10 @@ class McpToolRegistryImplTest {
         var contextToolList = mcpToolRegistry.listToolsByEndpoint(McpEndpointType.CONTEXT, Locale.ENGLISH);
         var taskToolList = mcpToolRegistry.listToolsByEndpoint(McpEndpointType.TASKS, Locale.ENGLISH);
 
-        assertEquals(34, contextToolList.size());
-        assertEquals(14, taskToolList.size());
+        assertEquals(35, contextToolList.size());
+        assertEquals(15, taskToolList.size());
+        assertTrue(contextToolList.stream().anyMatch(tool -> "get_project_settings".equals(tool.name())));
+        assertTrue(taskToolList.stream().anyMatch(tool -> "get_project_settings".equals(tool.name())));
         assertTrue(contextToolList.stream().anyMatch(tool -> "propose_memory".equals(tool.name())));
         assertFalse(contextToolList.stream().anyMatch(tool -> "create_task".equals(tool.name())));
         assertTrue(taskToolList.stream().anyMatch(tool -> "create_task".equals(tool.name())));
@@ -94,14 +104,29 @@ class McpToolRegistryImplTest {
     }
 
     @Test
+    void readsSharedProjectSettingsFromBothIndependentMcpServers() {
+        // Verifies both MCP servers expose the same project settings through the shared Core service.
+        var projectSettingsRecord = new ProjectSettingsRecord("project-1", true, true, true, TaskCreationMode.MANUAL, false, true, 6000, 70, false, null, 0L);
+        var arguments = new ObjectMapper().createObjectNode().put("projectId", "project-1");
+        when(projectSettingsService.getProjectSettingsByProjectId("project-1")).thenReturn(projectSettingsRecord);
+
+        var contextResult = mcpToolRegistry.callToolByEndpointAndNameAndArguments(McpEndpointType.CONTEXT, "get_project_settings", arguments, Locale.ENGLISH);
+        var taskResult = mcpToolRegistry.callToolByEndpointAndNameAndArguments(McpEndpointType.TASKS, "get_project_settings", arguments, Locale.ENGLISH);
+        var contextContent = objectValue(contextResult.structuredContent());
+        var taskContent = objectValue(taskResult.structuredContent());
+
+        assertFalse(contextResult.isError());
+        assertFalse(taskResult.isError());
+        assertEquals(projectSettingsRecord, contextContent.get("data"));
+        assertEquals(projectSettingsRecord, taskContent.get("data"));
+        verify(projectSettingsService, times(2)).getProjectSettingsByProjectId("project-1");
+    }
+
+    @Test
     void rejectsUnknownFieldsDuplicateTagsAndEmptyPartialUpdates() {
         // Verifies schema constraints reject malformed writes before calling business services.
         var unknownFieldArguments = new ObjectMapper().createObjectNode().put("profileId", "profile-1").put("name", "Skill").put("instructions", "Use this skill").put("unexpected", "value");
-        var duplicateTagsArguments = new ObjectMapper().createObjectNode()
-                .put("profileId", "profile-1")
-                .put("name", "Skill")
-                .put("instructions", "Use this skill")
-                .set("tags", new ObjectMapper().createArrayNode().add("java").add("java"));
+        var duplicateTagsArguments = new ObjectMapper().createObjectNode().put("profileId", "profile-1").put("name", "Skill").put("instructions", "Use this skill").set("tags", new ObjectMapper().createArrayNode().add("java").add("java"));
         var emptyChangesArguments = new ObjectMapper().createObjectNode().put("taskId", "task-1").set("changes", new ObjectMapper().createObjectNode());
 
         assertTrue(mcpToolRegistry.callToolByEndpointAndNameAndArguments(McpEndpointType.CONTEXT, "create_skill", unknownFieldArguments, Locale.ENGLISH).isError());
