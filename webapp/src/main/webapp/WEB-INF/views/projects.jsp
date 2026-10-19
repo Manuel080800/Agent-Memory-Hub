@@ -29,7 +29,7 @@
                         <div class="col-auto ms-auto d-print-none">
                             <div class="d-flex flex-wrap gap-2">
                                 <a v-if="platformRole === 'ADMIN'" class="btn btn-outline-primary" href="${pageContext.request.contextPath}/admin/users"><spring:message code='ui.users' /></a>
-                                <button class="btn btn-primary" type="button" @click="showCreateProject = !showCreateProject"><svg class="icon me-1" aria-hidden="true"><use href="${pageContext.request.contextPath}/assets/vendor/tabler/icons.svg#plus"></use></svg><spring:message code='ui.project.new' /></button>
+                                <button class="btn btn-primary" type="button" @click="createProject"><svg class="icon me-1" aria-hidden="true"><use href="${pageContext.request.contextPath}/assets/vendor/tabler/icons.svg#plus"></use></svg><spring:message code='ui.project.new' /></button>
                             </div>
                         </div>
                     </div>
@@ -48,17 +48,6 @@
                     <div>{{ noticeMessage }}</div>
                     <button type="button" class="btn-close" aria-label="<spring:message code='ui.alert.dismiss' />" @click="noticeMessage = ''"></button>
                 </div>
-
-                <section v-if="showCreateProject" class="card workspace-card mb-4">
-                    <div class="card-header"><h2 class="card-title mb-0"><spring:message code='ui.project.create' /></h2></div>
-                    <div class="card-body">
-                        <form class="row g-3" @submit.prevent="createProject">
-                            <div class="col-md-4"><label class="form-label" for="project-name"><spring:message code='ui.name' /></label><input id="project-name" v-model="projectForm.name" class="form-control" required></div>
-                            <div class="col-md-6"><label class="form-label" for="project-description"><spring:message code='ui.description' /></label><input id="project-description" v-model="projectForm.description" class="form-control"></div>
-                            <div class="col-md-2 d-flex align-items-end"><button class="btn btn-primary w-100" type="submit"><spring:message code='ui.create' /></button></div>
-                        </form>
-                    </div>
-                </section>
 
                 <div class="row row-cards align-items-start">
                     <aside class="col-xl-3 col-lg-4">
@@ -110,6 +99,7 @@
                                             <div class="page-pretitle"><spring:message code='ui.project.label' /></div>
                                             <h2 class="card-title h2 mb-1">{{ selectedProject.name }}</h2>
                                             <div class="text-secondary">{{ selectedProject.description || messages.descriptionEmpty }}</div>
+                                            <span class="badge mt-2" :class="selectedProject.enabled ? 'text-bg-success' : 'text-bg-secondary'">{{ selectedProject.enabled ? messages.active : messages.inactive }}</span>
                                         </div>
                                         <div class="col-12 col-lg-auto">
                                             <div class="d-flex flex-wrap gap-2">
@@ -160,7 +150,7 @@
                                             <p class="text-primary fw-semibold mb-1"><spring:message code='ui.workspace.profile' /></p>
                                             <h3 class="h4 mb-0"><spring:message code='ui.profile.list' /></h3>
                                         </div>
-                                        <button v-if="canEditProject" class="btn btn-primary" type="button" @click="showCreateProfile = !showCreateProfile"><spring:message code='ui.profile.new' /></button>
+                                        <button v-if="canEditProject" class="btn btn-primary" type="button" @click="createProfile"><spring:message code='ui.profile.new' /></button>
                                     </div>
                                     <div v-if="profileList.length" class="list-group list-group-flush">
                                         <article v-for="profile in profileList" :key="profile.id" class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-3" :class="{ 'bg-blue-lt': profile.id === activeProfileId }">
@@ -175,16 +165,6 @@
                                         </article>
                                     </div>
                                     <p v-else class="text-body-secondary py-4 mb-0"><spring:message code='ui.profiles.empty' /></p>
-                                    <section v-if="showCreateProfile && canEditProject" class="card workspace-card profile-create-card mb-4">
-                                        <div class="card-body">
-                                            <h3 class="h5"><spring:message code='ui.profile.create' /></h3>
-                                            <form class="row g-3" @submit.prevent="createProfile">
-                                                <div class="col-md-4"><label class="form-label" for="profile-name"><spring:message code='ui.name' /></label><input id="profile-name" v-model="profileForm.name" class="form-control" required></div>
-                                                <div class="col-md-6"><label class="form-label" for="profile-description"><spring:message code='ui.description' /></label><input id="profile-description" v-model="profileForm.description" class="form-control"></div>
-                                                <div class="col-md-2 d-flex align-items-end"><button class="btn btn-primary w-100" type="submit"><spring:message code='ui.create' /></button></div>
-                                            </form>
-                                        </div>
-                                    </section>
                                 </section>
                                         <div v-if="activeWorkspaceSection === 'settings'" class="card workspace-card h-100">
                                             <div class="card-body">
@@ -197,6 +177,7 @@
                                                     <div class="col-12 form-check form-switch"><input id="compact-enabled" v-model="settingsForm.compactRecoveryEnabled" class="form-check-input" type="checkbox" :disabled="currentProjectRole !== 'OWNER'"><label class="form-check-label" for="compact-enabled"><spring:message code='ui.context.compaction' /></label></div>
                                                     <div class="col-12 form-check form-switch"><input id="selection-enabled" v-model="settingsForm.contextualSelectionEnabled" class="form-check-input" type="checkbox" :disabled="currentProjectRole !== 'OWNER'"><label class="form-check-label" for="selection-enabled"><spring:message code='ui.context.selection' /></label></div>
                                                     <div class="col-12 form-check form-switch"><input id="task-retrieval" v-model="settingsForm.selectedTaskRetrievalEnabled" class="form-check-input" type="checkbox" :disabled="currentProjectRole !== 'OWNER'"><label class="form-check-label" for="task-retrieval"><spring:message code='ui.task.selectedRetrieval' /></label></div>
+                                                    <div class="col-12 form-check form-switch"><input id="pre-tool-context" v-model="settingsForm.preToolUseContextEnabled" class="form-check-input" type="checkbox" :disabled="currentProjectRole !== 'OWNER'"><label class="form-check-label" for="pre-tool-context"><spring:message code='ui.context.preToolUse' /></label></div>
                                                     <div class="col-12 form-check form-switch"><input id="summary-enabled" v-model="settingsForm.automaticSummaryEnabled" class="form-check-input" type="checkbox" :disabled="currentProjectRole !== 'OWNER'"><label class="form-check-label" for="summary-enabled"><spring:message code='ui.summary.automatic' /></label></div>
                                                     <div class="col-md-6"><label class="form-label" for="creation-mode"><spring:message code='ui.task.creation' /></label><select id="creation-mode" v-model="settingsForm.taskCreationMode" class="form-select" :disabled="currentProjectRole !== 'OWNER'"><option value="MANUAL"><spring:message code='ui.manual' /></option><option value="SUGGEST"><spring:message code='ui.suggest' /></option><option value="AUTOMATIC"><spring:message code='ui.automatic' /></option></select></div>
                                                     <div class="col-md-3"><label class="form-label" for="budget"><spring:message code='ui.budget' /></label><input id="budget" v-model.number="settingsForm.contextBudgetTokens" class="form-control" type="number" min="100" max="100000" :disabled="currentProjectRole !== 'OWNER'"></div>
@@ -209,8 +190,8 @@
                                             <div class="card-body">
                                                 <p class="text-primary fw-semibold mb-1"><spring:message code='ui.connections' /></p><h3 class="h6 mb-3"><spring:message code='ui.connections.servers' /></h3>
                                                 <div v-for="connectionType in ['CONTEXT', 'TASKS']" :key="connectionType" class="d-flex justify-content-between align-items-center border-bottom py-2">
-                                                    <div><span class="fw-semibold">{{ connectionType === 'CONTEXT' ? messages.context : messages.tasks }}</span><small class="d-block text-body-secondary">{{ connectionForType(connectionType) ? (connectionForType(connectionType).enabled ? messages.enabled : messages.disabled) : messages.connectionUnconfigured }}</small></div>
-                                                    <button v-if="currentProjectRole === 'OWNER'" class="btn btn-sm" :class="connectionForType(connectionType) && connectionForType(connectionType).enabled ? 'btn-outline-danger' : 'btn-outline-success'" type="button" @click="toggleConnection(connectionType)">{{ connectionForType(connectionType) && connectionForType(connectionType).enabled ? messages.disable : messages.enable }}</button>
+                                                    <div><span class="fw-semibold">{{ connectionForType(connectionType) ? connectionForType(connectionType).name : (connectionType === 'CONTEXT' ? messages.context : messages.tasks) }}</span><small class="d-block text-body-secondary">{{ connectionForType(connectionType) ? (connectionForType(connectionType).enabled ? messages.enabled : messages.disabled) : messages.connectionUnconfigured }}</small></div>
+                                                    <div v-if="currentProjectRole === 'OWNER'" class="d-flex gap-2"><button v-if="connectionForType(connectionType)" class="btn btn-sm btn-outline-secondary" type="button" @click="renameConnection(connectionForType(connectionType))"><spring:message code='ui.edit' /></button><button v-if="connectionForType(connectionType)" class="btn btn-sm btn-outline-danger" type="button" @click="deleteConnection(connectionForType(connectionType))"><spring:message code='ui.delete' /></button><button class="btn btn-sm" :class="connectionForType(connectionType) && connectionForType(connectionType).enabled ? 'btn-outline-danger' : 'btn-outline-success'" type="button" @click="toggleConnection(connectionType)">{{ connectionForType(connectionType) && connectionForType(connectionType).enabled ? messages.disable : messages.enable }}</button></div>
                                                 </div>
                                             </div>
                                         </div>
@@ -221,11 +202,7 @@
                                                     <div><span class="d-block fw-semibold">{{ member.fullName }}</span><small class="text-body-secondary">{{ member.email }}</small><select v-if="currentProjectRole === 'OWNER' && member.projectRole !== 'OWNER'" v-model="member.projectRole" class="form-select form-select-sm mt-1"><option value="READER"><spring:message code='ui.role.reader' /></option><option value="EDITOR"><spring:message code='ui.role.editor' /></option></select><small v-else class="d-block text-body-secondary">{{ roleLabel(member.projectRole) }}</small></div>
                                                     <div v-if="currentProjectRole === 'OWNER' && member.projectRole !== 'OWNER'" class="d-flex flex-column gap-1"><button class="btn btn-sm btn-link p-0" type="button" @click="updateMember(member)"><spring:message code='ui.member.saveRole' /></button><button class="btn btn-sm btn-link text-danger p-0" type="button" @click="removeMember(member)"><spring:message code='ui.remove' /></button></div>
                                                 </div>
-                                                <form v-if="currentProjectRole === 'OWNER'" class="mt-3" @submit.prevent="addMember">
-                                                    <label class="form-label" for="member-user-id"><spring:message code='ui.member.userId' /></label><input id="member-user-id" v-model="memberForm.userId" class="form-control form-control-sm mb-2" required>
-                                                    <select v-model="memberForm.projectRole" class="form-select form-select-sm mb-2"><option value="READER"><spring:message code='ui.role.reader' /></option><option value="EDITOR"><spring:message code='ui.role.editor' /></option></select>
-                                                    <button class="btn btn-sm btn-outline-primary w-100" type="submit"><spring:message code='ui.member.add' /></button>
-                                                </form>
+                                                <button v-if="currentProjectRole === 'OWNER'" class="btn btn-sm btn-outline-primary mt-3 w-100" type="button" @click="addMember"><spring:message code='ui.member.add' /></button>
                                             </div>
                                         </div>
                                 <section v-if="isResourceSection" class="card workspace-card resource-section">
@@ -238,16 +215,8 @@
                                     <div class="card-body">
                                         <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
                                             <h4 class="h6 mb-0">{{ resourceTypeLabel(activeResourceType) }}</h4>
-                                            <button v-if="canEditProject" class="btn btn-sm btn-primary" type="button" @click="showCreateResource = !showCreateResource"><spring:message code='ui.add' /></button>
+                                            <button v-if="canEditProject" class="btn btn-sm btn-primary" type="button" @click="createResource"><spring:message code='ui.add' /></button>
                                         </div>
-
-                                        <form v-if="showCreateResource && canEditProject" class="row g-3 p-3 bg-body-tertiary rounded mb-4" @submit.prevent="createResource">
-                                            <div class="col-md-6"><label class="form-label" for="resource-title">{{ activeResourceType === 'MEMORY' || activeResourceType === 'TASK' ? messages.title : messages.resourceName }}</label><input id="resource-title" v-model="resourceForm.title" class="form-control" required></div>
-                                            <div v-if="activeResourceType !== 'SKILL' && activeResourceType !== 'WORKFLOW'" class="col-md-6"><label class="form-label" for="resource-description">{{ activeResourceType === 'MEMORY' ? messages.content : messages.objective }}</label><textarea id="resource-description" v-model="resourceForm.description" class="form-control" rows="2" required></textarea></div>
-                                            <div v-if="activeResourceType === 'SKILL' || activeResourceType === 'WORKFLOW'" class="col-md-6"><label class="form-label" for="resource-instructions"><spring:message code='ui.instructions' /></label><textarea id="resource-instructions" v-model="resourceForm.instructions" class="form-control" rows="2" required></textarea></div>
-                                            <div v-if="activeResourceType === 'MEMORY'" class="col-md-4"><label class="form-label" for="application-mode"><spring:message code='ui.mode' /></label><select id="application-mode" v-model="resourceForm.applicationMode" class="form-select"><option value="CONTEXTUAL"><spring:message code='ui.mode.contextual' /></option><option value="ALWAYS"><spring:message code='ui.mode.always' /></option></select></div>
-                                            <div class="col-12"><button class="btn btn-primary" type="submit"><spring:message code='ui.save' /></button> <button class="btn btn-link" type="button" @click="showCreateResource = false"><spring:message code='ui.cancel' /></button></div>
-                                        </form>
 
                                         <div v-if="resourceList.length === 0" class="text-body-secondary py-4 text-center"><spring:message code='ui.resources.empty' /></div>
                                         <div class="row g-3">
@@ -258,13 +227,15 @@
                                                             <div>
                                                                 <h5 class="h6">{{ resource.title || resource.name }}</h5>
                                                                 <p v-if="resource.description" class="text-body-secondary">{{ resource.description }}</p>
+                                                                <p v-if="activeResourceType === 'TASK' && resource.summary" class="small"><span class="fw-semibold"><spring:message code='ui.summary' />:</span> {{ resource.summary }}</p>
+                                                                <div class="d-flex flex-wrap gap-1 mb-2"><span v-for="tag in resource.tags || []" :key="tag" class="badge text-bg-secondary">{{ tag }}</span><span v-if="resource.applicationMode" class="badge text-bg-blue-lt">{{ resource.applicationMode === 'ALWAYS' ? messages.modeAlways : messages.modeContextual }}</span><span v-if="resource.enabled !== undefined" class="badge" :class="resource.enabled ? 'text-bg-success' : 'text-bg-secondary'">{{ resource.enabled ? messages.enabled : messages.disabled }}</span></div>
                                                             </div>
                                                             <div v-if="canEditProject" class="d-flex gap-2">
                                                                 <button class="btn btn-sm btn-outline-primary align-self-start" type="button" @click="editResource(resource)"><spring:message code='ui.edit' /></button>
                                                                 <button class="btn btn-sm btn-outline-danger align-self-start" type="button" @click="deleteResource(resource)"><spring:message code='ui.delete' /></button>
                                                             </div>
                                                         </div>
-                                                        <p v-if="resource.content || resource.instructions || resource.summary" class="content-preview mb-0">{{ resource.content || resource.instructions || resource.summary }}</p>
+                                                        <p v-if="resource.content || resource.instructions" class="content-preview mb-0">{{ resource.content || resource.instructions }}</p>
                                                         <div v-if="activeResourceType === 'TASK'" class="mt-3">
                                                             <button class="btn btn-sm btn-outline-secondary me-2" type="button" @click="loadTaskBlocks(resource)"><spring:message code='ui.task.blocks' /></button>
                                                             <button class="btn btn-sm btn-outline-primary" type="button" @click="loadProposals(resource)"><spring:message code='ui.proposal.view' /></button>
@@ -274,12 +245,13 @@
                                                                     <div class="d-flex justify-content-between gap-3"><p class="content-preview mb-2">{{ block.content }}</p><div v-if="canEditProject" class="text-nowrap"><button class="btn btn-sm btn-link" type="button" @click="editTaskBlock(resource, block)"><spring:message code='ui.edit' /></button><button class="btn btn-sm btn-link text-danger" type="button" @click="deleteTaskBlock(resource, block)"><spring:message code='ui.delete' /></button></div></div>
                                                                 </div>
                                                                 <p v-if="blockList.length === 0" class="small text-body-secondary"><spring:message code='ui.block.empty' /></p>
-                                                                <form v-if="canEditProject" class="mt-3" @submit.prevent="createTaskBlock(resource)"><textarea v-model="blockContent" class="form-control mb-2" rows="2" placeholder="<spring:message code='ui.block.new' />" required></textarea><button class="btn btn-sm btn-primary" type="submit"><spring:message code='ui.block.add' /></button></form>
+                                                                <button v-if="canEditProject" class="btn btn-sm btn-primary mt-2" type="button" @click="createTaskBlock(resource)"><spring:message code='ui.block.add' /></button>
                                                             </div>
                                                             <div v-if="proposalTaskId === resource.id" class="mt-3">
+                                                                <div class="d-flex justify-content-end mb-2"><button v-if="canEditProject" class="btn btn-sm btn-primary" type="button" @click="createProposal(resource)"><spring:message code='ui.proposal.new' /></button></div>
                                                                 <div v-for="proposal in proposalList" :key="proposal.id" class="border rounded p-3 mb-2 bg-white">
                                                                     <div class="d-flex justify-content-between gap-3">
-                                                                        <div><p class="fw-semibold mb-1">{{ proposal.reason }}</p><p class="content-preview mb-2">{{ proposal.proposedContent }}</p></div>
+                                                                        <div><p class="fw-semibold mb-1">{{ proposal.reason }}</p><p class="content-preview mb-2">{{ proposal.proposedContent }}</p><div class="d-flex flex-wrap gap-1"><span v-for="tag in proposal.tags || []" :key="tag" class="badge text-bg-secondary">{{ tag }}</span><span class="badge" :class="proposal.processed ? 'text-bg-secondary' : 'text-bg-success'">{{ proposal.processed ? messages.processed : messages.pending }}</span><span v-if="proposal.resultMemoryId" class="badge text-bg-blue-lt">{{ messages.resultMemory }}: {{ proposal.resultMemoryId }}</span></div></div>
                                                                         <div class="d-flex gap-2 align-self-start"><button v-if="canEditProject && !proposal.processed" class="btn btn-sm btn-outline-primary" type="button" @click="editProposal(resource, proposal)"><spring:message code='ui.edit' /></button><button v-if="currentProjectRole === 'OWNER' && !proposal.processed" class="btn btn-sm btn-success" type="button" @click="approveProposal(resource, proposal)"><spring:message code='ui.proposal.approve' /></button><button v-if="canEditProject && !proposal.processed" class="btn btn-sm btn-outline-danger" type="button" @click="deleteProposal(resource, proposal)"><spring:message code='ui.delete' /></button></div>
                                                                     </div>
                                                                 </div>
@@ -301,7 +273,7 @@
             </main>
                 <button id="hub-dialog-trigger" class="d-none" type="button" data-bs-toggle="modal" data-bs-target="#hub-dialog" tabindex="-1" aria-hidden="true"></button>
                 <div id="hub-dialog" class="modal modal-blur fade" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" :class="{ 'modal-lg': dialogFields.length > 3 }">
                         <div class="modal-content">
                             <div class="modal-header">
                                 <h5 class="modal-title">{{ dialogTitle }}</h5>
@@ -311,9 +283,11 @@
                                 <div class="modal-body">
                                     <div v-if="dialogError" class="alert alert-danger" role="alert">{{ dialogError }}</div>
                                     <div v-for="field in dialogFields" :key="field.key" class="mb-3">
-                                        <label class="form-label" :for="'hub-dialog-field-' + field.key">{{ field.label }}</label>
+                                        <label v-if="field.type !== 'checkbox'" class="form-label" :for="'hub-dialog-field-' + field.key">{{ field.label }}</label>
                                         <textarea v-if="field.multiline" :id="'hub-dialog-field-' + field.key" v-model="dialogValues[field.key]" class="form-control" rows="4" :required="field.required"></textarea>
-                                        <input v-else :id="'hub-dialog-field-' + field.key" v-model="dialogValues[field.key]" class="form-control" :required="field.required">
+                                        <select v-else-if="field.options" :id="'hub-dialog-field-' + field.key" v-model="dialogValues[field.key]" class="form-select" :required="field.required"><option v-for="option in field.options" :key="option.value" :value="option.value">{{ option.label }}</option></select>
+                                        <label v-else-if="field.type === 'checkbox'" class="form-check form-switch"><input :id="'hub-dialog-field-' + field.key" v-model="dialogValues[field.key]" class="form-check-input" type="checkbox"><span class="form-check-label">{{ field.label }}</span></label>
+                                        <input v-else :id="'hub-dialog-field-' + field.key" v-model="dialogValues[field.key]" class="form-control" :type="field.inputType || 'text'" :required="field.required" :minlength="field.minlength">
                                     </div>
                                 </div>
                                 <div class="modal-footer">

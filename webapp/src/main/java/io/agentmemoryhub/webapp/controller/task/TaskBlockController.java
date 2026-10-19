@@ -48,9 +48,9 @@ public class TaskBlockController {
     }
 
     @DeleteMapping("/{blockId}")
-    public ResponseEntity<Void> deleteTaskBlock(@PathVariable String projectId, @PathVariable String profileId, @PathVariable String taskId, @PathVariable String blockId, @RequestParam(defaultValue = "false") boolean confirm) {
+    public ResponseEntity<Void> deleteTaskBlock(@PathVariable String projectId, @PathVariable String profileId, @PathVariable String taskId, @PathVariable String blockId) {
         validateTaskBlockRelation(projectId, profileId, taskId, blockId);
-        taskBlockService.deleteTaskBlockById(blockId, confirm);
+        taskBlockService.deleteTaskBlockById(blockId, true);
         return ResponseEntity.noContent().build();
     }
 

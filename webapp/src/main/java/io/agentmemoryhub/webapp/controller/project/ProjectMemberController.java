@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 @RequiredArgsConstructor
@@ -38,8 +37,8 @@ public class ProjectMemberController {
     }
 
     @DeleteMapping("/{userId}")
-    public ResponseEntity<Void> removeMember(@PathVariable String projectId, @PathVariable String userId, @RequestParam(defaultValue = "false") boolean confirm) {
-        projectMemberService.removeProjectMemberByProjectIdAndUserId(projectId, userId, confirm);
+    public ResponseEntity<Void> removeMember(@PathVariable String projectId, @PathVariable String userId) {
+        projectMemberService.removeProjectMemberByProjectIdAndUserId(projectId, userId, true);
         return ResponseEntity.noContent().build();
     }
 }

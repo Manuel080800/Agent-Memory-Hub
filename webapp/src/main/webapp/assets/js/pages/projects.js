@@ -27,8 +27,14 @@ const messages = {
     content: translations['ui.content'],
     objective: translations['ui.objective'],
     instructions: translations['ui.instructions'],
+    description: translations['ui.description'],
+    mode: translations['ui.mode'],
+    modeAlways: translations['ui.mode.always'],
+    modeContextual: translations['ui.mode.contextual'],
+    tagsPlaceholder: translations['ui.tags.placeholder'],
     descriptionEmpty: translations['ui.description.empty'],
     projectCreated: translations['ui.project.created'],
+    projectCreateTitle: translations['ui.project.create'],
     projectUpdated: translations['ui.project.updated'],
     projectEditTitle: translations['ui.project.edit.title'],
     projectDeleteConfirm: translations['ui.project.delete.confirm'],
@@ -36,6 +42,7 @@ const messages = {
     projectNamePrompt: translations['ui.project.name.prompt'],
     projectDescriptionPrompt: translations['ui.project.description.prompt'],
     profileCreated: translations['ui.profile.created'],
+    profileCreateTitle: translations['ui.profile.create'],
     profileUpdated: translations['ui.profile.updated'],
     profileEditTitle: translations['ui.profile.edit.title'],
     profileDeleted: translations['ui.profile.deleted'],
@@ -45,12 +52,17 @@ const messages = {
     settingsSaved: translations['ui.settings.saved'],
     settingsResetConfirm: translations['ui.settings.reset.confirm'],
     settingsReset: translations['ui.settings.reset'],
+    connectionNamePrompt: translations['ui.connection.name.prompt'],
+    connectionDeleteConfirm: translations['ui.connection.delete.confirm'],
     confirmationTitle: translations['ui.dialog.confirmation.title'],
     requiredFields: translations['ui.dialog.required'],
     confirm: translations['ui.confirm'],
+    create: translations['ui.create'],
     delete: translations['ui.delete'],
     save: translations['ui.save'],
     memberAdded: translations['ui.member.added'],
+    memberAddTitle: translations['ui.member.add'],
+    memberUserIdPrompt: translations['ui.member.userId'],
     memberRoleUpdated: translations['ui.member.roleUpdated'],
     memberRemoveConfirm: translations['ui.member.remove.confirm'],
     roleOwner: translations['ui.role.owner'],
@@ -59,6 +71,12 @@ const messages = {
     connectionTasksName: translations['ui.connection.tasksName'],
     connectionUpdated: translations['ui.connection.updated'],
     resourceCreated: translations['ui.resource.created'],
+    resourceCreateTitles: {
+        SKILL: translations['ui.resource.create.skill'],
+        WORKFLOW: translations['ui.resource.create.workflow'],
+        MEMORY: translations['ui.resource.create.memory'],
+        TASK: translations['ui.resource.create.task']
+    },
     resourceEditTitle: translations['ui.resource.edit.title'],
     resourceNamePrompt: translations['ui.resource.name.prompt'],
     resourceUpdated: translations['ui.resource.updated'],
@@ -67,10 +85,19 @@ const messages = {
     proposalContentPrompt: translations['ui.proposal.content.prompt'],
     proposalEditTitle: translations['ui.proposal.edit.title'],
     proposalReasonPrompt: translations['ui.proposal.reason.prompt'],
+    proposalTagsPrompt: translations['ui.tags'],
+    proposalNewTitle: translations['ui.proposal.new.title'],
+    proposalNew: translations['ui.proposal.new'],
+    proposalCreated: translations['ui.proposal.created'],
+    pending: translations['ui.proposal.pending'],
+    processed: translations['ui.proposal.processed'],
+    resultMemory: translations['ui.proposal.resultMemory'],
     proposalUpdated: translations['ui.proposal.updated'],
     proposalDeleteConfirm: translations['ui.proposal.delete.confirm'],
     proposalDeleted: translations['ui.proposal.deleted'],
     blockAdded: translations['ui.block.added'],
+    blockAdd: translations['ui.block.add'],
+    blockNew: translations['ui.block.new'],
     blockContentPrompt: translations['ui.block.content.prompt'],
     blockUpdated: translations['ui.block.updated'],
     blockDeleteConfirm: translations['ui.block.delete.confirm'],
@@ -98,10 +125,8 @@ createApp({
             connectionList: [],
             settingsRecord: null,
             settingsForm: {},
-            memberForm: { userId: '', projectRole: 'READER' },
             blockList: [],
             blockTaskId: null,
-            blockContent: '',
             messages,
             platformRole,
             currentProjectRole: null,
@@ -112,12 +137,6 @@ createApp({
             activeResourceType: 'SKILL',
             proposalTaskId: null,
             resourceTypeList: ['SKILL', 'WORKFLOW', 'MEMORY', 'TASK'],
-            projectForm: { name: '', description: '' },
-            profileForm: { name: '', description: '' },
-            resourceForm: { title: '', description: '', instructions: '', applicationMode: 'CONTEXTUAL' },
-            showCreateProject: false,
-            showCreateProfile: false,
-            showCreateResource: false,
             errorMessage: '',
             noticeMessage: '',
             dialogMode: '',
@@ -147,14 +166,14 @@ createApp({
         }
     },
     methods: {
-        showFormDialog(title, fields) {
+        showFormDialog(title, fields, submitLabel = messages.save) {
             return new Promise(resolve => {
                 this.dialogMode = 'form';
                 this.dialogTitle = title;
                 this.dialogMessage = '';
                 this.dialogFields = fields;
-                this.dialogValues = Object.fromEntries(fields.map(field => [field.key, field.value || '']));
-                this.dialogSubmitLabel = messages.save;
+                this.dialogValues = Object.fromEntries(fields.map(field => [field.key, field.value ?? '']));
+                this.dialogSubmitLabel = submitLabel;
                 this.dialogDanger = false;
                 this.dialogError = '';
                 this.dialogResolve = resolve;
@@ -222,8 +241,6 @@ createApp({
                 ]);
                 this.selectedProject = project;
                 this.activeWorkspaceSection = 'overview';
-                this.showCreateProfile = false;
-                this.showCreateResource = false;
                 this.profileList = profilePage.items || [];
                 this.settingsRecord = settingsRecord;
                 this.settingsForm = { ...settingsRecord };
@@ -240,10 +257,14 @@ createApp({
             } catch (error) { this.showError(error); }
         },
         async createProject() {
+            const values = await this.showFormDialog(messages.projectCreateTitle, [
+                { key: 'name', label: messages.projectNamePrompt, value: '', required: true },
+                { key: 'description', label: messages.projectDescriptionPrompt, value: '' },
+                { key: 'enabled', label: messages.enabled, value: true, type: 'checkbox' }
+            ], messages.create);
+            if (!values) return;
             try {
-                await this.request('/projects', { method: 'POST', body: JSON.stringify({ ...this.projectForm, enabled: true }) });
-                this.projectForm = { name: '', description: '' };
-                this.showCreateProject = false;
+                await this.request('/projects', { method: 'POST', body: JSON.stringify({ name: values.name.trim(), description: values.description, enabled: values.enabled }) });
                 this.noticeMessage = messages.projectCreated;
                 await this.loadProjects();
             } catch (error) { this.showError(error); }
@@ -251,14 +272,16 @@ createApp({
         async editProject() {
             const values = await this.showFormDialog(messages.projectEditTitle, [
                 { key: 'name', label: messages.projectNamePrompt, value: this.selectedProject.name, required: true },
-                { key: 'description', label: messages.projectDescriptionPrompt, value: this.selectedProject.description || '', required: false }
+                { key: 'description', label: messages.projectDescriptionPrompt, value: this.selectedProject.description || '', required: false },
+                { key: 'enabled', label: messages.enabled, value: this.selectedProject.enabled, type: 'checkbox' }
             ]);
             if (!values) return;
             try {
                 const projectPath = '/projects/' + this.selectedProject.id;
                 this.selectedProject = await this.request(projectPath, {
                     method: 'PUT',
-                    body: JSON.stringify({ name: values.name.trim(), description: values.description, enabled: this.selectedProject.enabled })
+                    headers: { 'If-Match': String(this.selectedProject.version) },
+                    body: JSON.stringify({ name: values.name.trim(), description: values.description, enabled: values.enabled })
                 });
                 await this.loadProjects();
                 this.noticeMessage = messages.projectUpdated;
@@ -267,7 +290,7 @@ createApp({
         async deleteProject() {
             if (!await this.showConfirmDialog(messages.projectDeleteConfirm, true)) return;
             try {
-                await this.request('/projects/' + this.selectedProject.id + '?confirm=true', { method: 'DELETE' });
+                await this.request('/projects/' + this.selectedProject.id, { method: 'DELETE' });
                 this.projectList = this.projectList.filter(project => project.id !== this.selectedProject.id);
                 this.selectedProject = null;
                 this.profileList = [];
@@ -276,10 +299,14 @@ createApp({
             } catch (error) { this.showError(error); }
         },
         async createProfile() {
+            const values = await this.showFormDialog(messages.profileCreateTitle, [
+                { key: 'name', label: messages.profileNamePrompt, value: '', required: true },
+                { key: 'description', label: messages.profileDescriptionPrompt, value: '' },
+                { key: 'enabled', label: messages.enabled, value: true, type: 'checkbox' }
+            ], messages.create);
+            if (!values || !this.selectedProject) return;
             try {
-                const profile = await this.request('/projects/' + this.selectedProject.id + '/profiles', { method: 'POST', body: JSON.stringify({ ...this.profileForm, enabled: true }) });
-                this.profileForm = { name: '', description: '' };
-                this.showCreateProfile = false;
+                const profile = await this.request('/projects/' + this.selectedProject.id + '/profiles', { method: 'POST', body: JSON.stringify({ name: values.name.trim(), description: values.description, enabled: values.enabled }) });
                 this.profileList.push(profile);
                 this.noticeMessage = messages.profileCreated;
             } catch (error) { this.showError(error); }
@@ -288,14 +315,16 @@ createApp({
             const profile = this.activeProfile;
             const values = await this.showFormDialog(messages.profileEditTitle, [
                 { key: 'name', label: messages.profileNamePrompt, value: profile.name, required: true },
-                { key: 'description', label: messages.profileDescriptionPrompt, value: profile.description || '', required: false }
+                { key: 'description', label: messages.profileDescriptionPrompt, value: profile.description || '', required: false },
+                { key: 'enabled', label: messages.enabled, value: profile.enabled, type: 'checkbox' }
             ]);
             if (!values) return;
             try {
                 const profilePath = '/projects/' + this.selectedProject.id + '/profiles/' + profile.id;
                 this.activeProfile = await this.request(profilePath, {
                     method: 'PUT',
-                    body: JSON.stringify({ name: values.name.trim(), description: values.description, enabled: profile.enabled })
+                    headers: { 'If-Match': String(profile.version) },
+                    body: JSON.stringify({ name: values.name.trim(), description: values.description, enabled: values.enabled })
                 });
                 Object.assign(profile, this.activeProfile);
                 this.noticeMessage = messages.profileUpdated;
@@ -304,7 +333,7 @@ createApp({
         async deleteProfile() {
             if (!await this.showConfirmDialog(messages.profileDeleteConfirm, true)) return;
             try {
-                await this.request('/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '?confirm=true', { method: 'DELETE' });
+                await this.request('/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId, { method: 'DELETE' });
                 this.profileList = this.profileList.filter(profile => profile.id !== this.activeProfileId);
                 this.activeProfile = null;
                 this.activeProfileId = '';
@@ -325,7 +354,6 @@ createApp({
         async selectWorkspaceSection(section) {
             this.clearMessages();
             this.activeWorkspaceSection = section;
-            this.showCreateResource = false;
             if (this.resourceTypeList.includes(section)) {
                 this.resourceList = [];
                 this.activeResourceType = section;
@@ -334,7 +362,7 @@ createApp({
         },
         async saveSettings() {
             try {
-                this.settingsRecord = await this.request('/projects/' + this.selectedProject.id + '/settings', { method: 'PUT', body: JSON.stringify(this.settingsPayload()) });
+                this.settingsRecord = await this.request('/projects/' + this.selectedProject.id + '/settings', { method: 'PUT', headers: { 'If-Match': String(this.settingsRecord.version) }, body: JSON.stringify(this.settingsPayload()) });
                 this.settingsForm = { ...this.settingsRecord };
                 this.noticeMessage = messages.settingsSaved;
             } catch (error) { this.showError(error); }
@@ -361,10 +389,14 @@ createApp({
             };
         },
         async addMember() {
+            const values = await this.showFormDialog(messages.memberAddTitle, [
+                { key: 'userId', label: messages.memberUserIdPrompt, value: '', required: true },
+                { key: 'projectRole', label: messages.roleEditor, value: 'READER', options: [{ value: 'READER', label: messages.roleReader }, { value: 'EDITOR', label: messages.roleEditor }] }
+            ], messages.memberAddTitle);
+            if (!values) return;
             try {
-                const member = await this.request('/projects/' + this.selectedProject.id + '/members', { method: 'POST', body: JSON.stringify(this.memberForm) });
+                const member = await this.request('/projects/' + this.selectedProject.id + '/members', { method: 'POST', body: JSON.stringify({ userId: values.userId.trim(), projectRole: values.projectRole }) });
                 this.memberList.push(member);
-                this.memberForm = { userId: '', projectRole: 'READER' };
                 this.noticeMessage = messages.memberAdded;
             } catch (error) { this.showError(error); }
         },
@@ -382,7 +414,7 @@ createApp({
         async removeMember(member) {
             if (!await this.showConfirmDialog(messages.memberRemoveConfirm.replace('{0}', member.fullName), true)) return;
             try {
-                await this.request('/projects/' + this.selectedProject.id + '/members/' + member.userId + '?confirm=true', { method: 'DELETE' });
+                await this.request('/projects/' + this.selectedProject.id + '/members/' + member.userId, { method: 'DELETE' });
                 this.memberList = this.memberList.filter(item => item.userId !== member.userId);
                 this.noticeMessage = messages.memberRemoved;
             } catch (error) { this.showError(error); }
@@ -391,17 +423,46 @@ createApp({
             return this.connectionList.find(connection => connection.connectionType === connectionType) || null;
         },
         async toggleConnection(connectionType) {
+            const connection = this.connectionForType(connectionType);
+            const path = '/projects/' + this.selectedProject.id + '/mcp-connections';
+            var connectionName;
+            if (!connection) {
+                const defaultName = connectionType === 'CONTEXT' ? messages.connectionContextName : messages.connectionTasksName;
+                const values = await this.showFormDialog(messages.connectionNamePrompt, [
+                    { key: 'name', label: messages.connectionNamePrompt, value: defaultName, required: true }
+                ], messages.create);
+                if (!values) return;
+                connectionName = values.name.trim();
+            }
             try {
-                const connection = this.connectionForType(connectionType);
-                const path = '/projects/' + this.selectedProject.id + '/mcp-connections';
                 if (connection) {
-                    await this.request(path + '/' + connection.id, { method: 'PUT', body: JSON.stringify({ enabled: !connection.enabled }) });
+                    await this.request(path + '/' + connection.id, { method: 'PUT', headers: { 'If-Match': String(connection.version) }, body: JSON.stringify({ enabled: !connection.enabled }) });
                 } else {
-                    const name = connectionType === 'CONTEXT' ? messages.connectionContextName : messages.connectionTasksName;
-                    await this.request(path, { method: 'POST', body: JSON.stringify({ name, connectionType, enabled: true }) });
+                    await this.request(path, { method: 'POST', body: JSON.stringify({ name: connectionName, connectionType, enabled: true }) });
                 }
                 const page = await this.request(path);
                 this.connectionList = page.items || [];
+                this.noticeMessage = messages.connectionUpdated;
+            } catch (error) { this.showError(error); }
+        },
+        async renameConnection(connection) {
+            const values = await this.showFormDialog(messages.connectionNamePrompt, [
+                { key: 'name', label: messages.connectionNamePrompt, value: connection.name, required: true }
+            ]);
+            if (!values) return;
+            try {
+                const path = '/projects/' + this.selectedProject.id + '/mcp-connections/' + connection.id;
+                await this.request(path, { method: 'PUT', headers: { 'If-Match': String(connection.version) }, body: JSON.stringify({ name: values.name.trim() }) });
+                const page = await this.request('/projects/' + this.selectedProject.id + '/mcp-connections');
+                this.connectionList = page.items || [];
+                this.noticeMessage = messages.connectionUpdated;
+            } catch (error) { this.showError(error); }
+        },
+        async deleteConnection(connection) {
+            if (!await this.showConfirmDialog(messages.connectionDeleteConfirm, true)) return;
+            try {
+                await this.request('/projects/' + this.selectedProject.id + '/mcp-connections/' + connection.id, { method: 'DELETE' });
+                this.connectionList = this.connectionList.filter(item => item.id !== connection.id);
                 this.noticeMessage = messages.connectionUpdated;
             } catch (error) { this.showError(error); }
         },
@@ -416,54 +477,82 @@ createApp({
             } catch (error) { this.showError(error); }
         },
         async createResource() {
+            const resourceType = this.activeResourceType;
+            const fields = [{ key: 'name', label: resourceType === 'MEMORY' || resourceType === 'TASK' ? messages.title : messages.resourceName, value: '', required: true }];
+            if (resourceType === 'SKILL' || resourceType === 'WORKFLOW') {
+                fields.push({ key: 'description', label: messages.description, value: '', multiline: true });
+                fields.push({ key: 'instructions', label: messages.instructions, value: '', multiline: true, required: true });
+                fields.push({ key: 'enabled', label: messages.enabled, value: true, type: 'checkbox' });
+                if (resourceType === 'SKILL') {
+                    fields.push({ key: 'tags', label: messages.proposalTagsPrompt, value: '' });
+                    fields.push({ key: 'applicationMode', label: messages.mode, value: 'CONTEXTUAL', options: [{ value: 'CONTEXTUAL', label: messages.modeContextual }, { value: 'ALWAYS', label: messages.modeAlways }] });
+                }
+            } else if (resourceType === 'MEMORY') {
+                fields.push({ key: 'content', label: messages.content, value: '', multiline: true, required: true });
+                fields.push({ key: 'tags', label: messages.proposalTagsPrompt, value: '' });
+                fields.push({ key: 'applicationMode', label: messages.mode, value: 'CONTEXTUAL', options: [{ value: 'CONTEXTUAL', label: messages.modeContextual }, { value: 'ALWAYS', label: messages.modeAlways }] });
+                fields.push({ key: 'enabled', label: messages.enabled, value: true, type: 'checkbox' });
+            } else {
+                fields.push({ key: 'description', label: messages.objective, value: '', multiline: true, required: true });
+                fields.push({ key: 'summary', label: messages.summary, value: '', multiline: true });
+            }
+            const values = await this.showFormDialog(messages.resourceCreateTitles[resourceType], fields, messages.create);
+            if (!values) return;
+            var body;
+            if (resourceType === 'SKILL') {
+                body = { name: values.name.trim(), description: values.description, instructions: values.instructions, enabled: values.enabled, tags: values.tags.split(/[\n,]/).map(tag => tag.trim()).filter(Boolean), applicationMode: values.applicationMode };
+            } else if (resourceType === 'WORKFLOW') {
+                body = { name: values.name.trim(), description: values.description, instructions: values.instructions, enabled: values.enabled };
+            } else if (resourceType === 'MEMORY') {
+                body = { title: values.name.trim(), content: values.content, tags: values.tags.split(/[\n,]/).map(tag => tag.trim()).filter(Boolean), applicationMode: values.applicationMode, enabled: values.enabled };
+            } else {
+                body = { title: values.name.trim(), description: values.description, summary: values.summary };
+            }
             try {
-                const body = this.resourceBody();
-                const resource = await this.request('/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '/resources/' + this.activeResourceType, { method: 'POST', body: JSON.stringify(body) });
+                const resource = await this.request('/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '/resources/' + resourceType, { method: 'POST', headers: { 'Idempotency-Key': window.crypto.randomUUID() }, body: JSON.stringify(body) });
                 this.resourceList.unshift(resource);
-                this.resourceForm = { title: '', description: '', instructions: '', applicationMode: 'CONTEXTUAL' };
-                this.showCreateResource = false;
-                this.noticeMessage = messages.resourceCreated.replace('{0}', this.resourceTypeLabel(this.activeResourceType));
+                this.noticeMessage = messages.resourceCreated.replace('{0}', this.resourceTypeLabel(resourceType));
             } catch (error) { this.showError(error); }
-        },
-        resourceBody() {
-            const enabled = true;
-            if (this.activeResourceType === 'SKILL' || this.activeResourceType === 'WORKFLOW') {
-                return { name: this.resourceForm.title, description: '', instructions: this.resourceForm.instructions, enabled, ...(this.activeResourceType === 'SKILL' ? { tags: [], applicationMode: 'ALWAYS' } : {}) };
-            }
-            if (this.activeResourceType === 'MEMORY') {
-                return { title: this.resourceForm.title, content: this.resourceForm.description, tags: [], applicationMode: this.resourceForm.applicationMode, enabled };
-            }
-            return { title: this.resourceForm.title, description: this.resourceForm.description, summary: '' };
         },
         async editResource(resource) {
             const resourceType = this.activeResourceType;
             const currentName = resource.name || resource.title;
-            const contentPrompt = resourceType === 'MEMORY' ? messages.content : resourceType === 'TASK' ? messages.objective : messages.instructions;
-            const currentContent = resource.content || resource.instructions || resource.description || '';
-            const values = await this.showFormDialog(messages.resourceEditTitle, [
-                { key: 'name', label: messages.resourceNamePrompt, value: currentName, required: true },
-                { key: 'content', label: contentPrompt, value: currentContent, multiline: true, required: resourceType === 'MEMORY' || resourceType === 'TASK' }
-            ]);
+            const fields = [{ key: 'name', label: messages.resourceNamePrompt, value: currentName, required: true }];
+            if (resourceType === 'SKILL' || resourceType === 'WORKFLOW') {
+                fields.push({ key: 'description', label: messages.description, value: resource.description || '', multiline: true });
+                fields.push({ key: 'instructions', label: messages.instructions, value: resource.instructions || '', multiline: true, required: true });
+                fields.push({ key: 'enabled', label: messages.enabled, value: resource.enabled, type: 'checkbox' });
+                if (resourceType === 'SKILL') {
+                    fields.push({ key: 'tags', label: messages.proposalTagsPrompt, value: (resource.tags || []).join(', ') });
+                    fields.push({ key: 'applicationMode', label: messages.mode, value: resource.applicationMode || 'ALWAYS', options: [{ value: 'CONTEXTUAL', label: messages.modeContextual }, { value: 'ALWAYS', label: messages.modeAlways }] });
+                }
+            } else if (resourceType === 'MEMORY') {
+                fields.push({ key: 'content', label: messages.content, value: resource.content || '', multiline: true, required: true });
+                fields.push({ key: 'tags', label: messages.proposalTagsPrompt, value: (resource.tags || []).join(', ') });
+                fields.push({ key: 'applicationMode', label: messages.mode, value: resource.applicationMode || 'CONTEXTUAL', options: [{ value: 'CONTEXTUAL', label: messages.modeContextual }, { value: 'ALWAYS', label: messages.modeAlways }] });
+                fields.push({ key: 'enabled', label: messages.enabled, value: resource.enabled, type: 'checkbox' });
+            } else {
+                fields.push({ key: 'description', label: messages.objective, value: resource.description || '', multiline: true, required: true });
+                fields.push({ key: 'summary', label: messages.summary, value: resource.summary || '', multiline: true });
+            }
+            const values = await this.showFormDialog(messages.resourceEditTitle, fields);
             if (!values) return;
-            const body = this.updatedResourceBody(resource, values.name.trim(), values.content);
+            var body;
+            if (resourceType === 'SKILL') {
+                body = { name: values.name.trim(), description: values.description, instructions: values.instructions, tags: values.tags.split(/[\n,]/).map(tag => tag.trim()).filter(Boolean), applicationMode: values.applicationMode, enabled: values.enabled };
+            } else if (resourceType === 'WORKFLOW') {
+                body = { name: values.name.trim(), description: values.description, instructions: values.instructions, enabled: values.enabled };
+            } else if (resourceType === 'MEMORY') {
+                body = { title: values.name.trim(), content: values.content, tags: values.tags.split(/[\n,]/).map(tag => tag.trim()).filter(Boolean), applicationMode: values.applicationMode, enabled: values.enabled };
+            } else {
+                body = { title: values.name.trim(), description: values.description, summary: values.summary };
+            }
             try {
                 const resourcePath = '/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '/' + resourcePathByType[resourceType] + '/' + resource.id;
-                const updatedResource = await this.request(resourcePath, { method: 'PUT', body: JSON.stringify(body) });
+                const updatedResource = await this.request(resourcePath, { method: 'PUT', headers: { 'If-Match': String(resource.version) }, body: JSON.stringify(body) });
                 Object.assign(resource, updatedResource);
                 this.noticeMessage = messages.resourceUpdated;
             } catch (error) { this.showError(error); }
-        },
-        updatedResourceBody(resource, updatedName, updatedContent) {
-            if (this.activeResourceType === 'SKILL') {
-                return { name: updatedName, description: resource.description || '', instructions: updatedContent, tags: resource.tags || [], applicationMode: resource.applicationMode || 'ALWAYS', enabled: resource.enabled };
-            }
-            if (this.activeResourceType === 'WORKFLOW') {
-                return { name: updatedName, description: resource.description || '', instructions: updatedContent, enabled: resource.enabled };
-            }
-            if (this.activeResourceType === 'MEMORY') {
-                return { title: updatedName, content: updatedContent, tags: resource.tags || [], applicationMode: resource.applicationMode || 'CONTEXTUAL', enabled: resource.enabled };
-            }
-            return { title: updatedName, description: updatedContent, summary: resource.summary || '' };
         },
         async deleteResource(resource) {
             if (!await this.showConfirmDialog(messages.resourceDeleteConfirm, true)) return;
@@ -481,17 +570,33 @@ createApp({
                 this.proposalList = page.items || [];
             } catch (error) { this.showError(error); }
         },
+        async createProposal(task) {
+            const values = await this.showFormDialog(messages.proposalNewTitle, [
+                { key: 'proposedContent', label: messages.proposalContentPrompt, value: '', multiline: true, required: true },
+                { key: 'reason', label: messages.proposalReasonPrompt, value: '', required: true },
+                { key: 'tags', label: messages.proposalTagsPrompt, value: '' }
+            ], messages.create);
+            if (!values) return;
+            try {
+                const path = '/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '/tasks/' + task.id + '/proposals';
+                const proposal = await this.request(path, { method: 'POST', headers: { 'Idempotency-Key': window.crypto.randomUUID() }, body: JSON.stringify({ proposedContent: values.proposedContent, reason: values.reason, tags: values.tags.split(/[\n,]/).map(tag => tag.trim()).filter(Boolean) }) });
+                this.proposalList.unshift(proposal);
+                this.noticeMessage = messages.proposalCreated;
+            } catch (error) { this.showError(error); }
+        },
         async editProposal(task, proposal) {
             const values = await this.showFormDialog(messages.proposalEditTitle, [
                 { key: 'proposedContent', label: messages.proposalContentPrompt, value: proposal.proposedContent, multiline: true, required: true },
-                { key: 'reason', label: messages.proposalReasonPrompt, value: proposal.reason, required: true }
+                { key: 'reason', label: messages.proposalReasonPrompt, value: proposal.reason, required: true },
+                { key: 'tags', label: messages.proposalTagsPrompt, value: (proposal.tags || []).join(', ') }
             ]);
             if (!values) return;
             try {
                 const proposalPath = '/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '/tasks/' + task.id + '/proposals/' + proposal.id;
                 const updatedProposal = await this.request(proposalPath, {
                     method: 'PUT',
-                    body: JSON.stringify({ proposedContent: values.proposedContent, reason: values.reason, tags: proposal.tags || [] })
+                    headers: { 'If-Match': String(proposal.version) },
+                    body: JSON.stringify({ proposedContent: values.proposedContent, reason: values.reason, tags: values.tags.split(/[\n,]/).map(tag => tag.trim()).filter(Boolean) })
                 });
                 Object.assign(proposal, updatedProposal);
                 this.noticeMessage = messages.proposalUpdated;
@@ -500,7 +605,7 @@ createApp({
         async deleteProposal(task, proposal) {
             if (!await this.showConfirmDialog(messages.proposalDeleteConfirm, true)) return;
             try {
-                const proposalPath = '/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '/tasks/' + task.id + '/proposals/' + proposal.id + '?confirm=true';
+                const proposalPath = '/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '/tasks/' + task.id + '/proposals/' + proposal.id;
                 await this.request(proposalPath, { method: 'DELETE' });
                 this.proposalList = this.proposalList.filter(item => item.id !== proposal.id);
                 this.noticeMessage = messages.proposalDeleted;
@@ -514,13 +619,17 @@ createApp({
             } catch (error) { this.showError(error); }
         },
         async createTaskBlock(task) {
+            const values = await this.showFormDialog(messages.blockAdd, [
+                { key: 'content', label: messages.blockNew, value: '', multiline: true, required: true }
+            ], messages.blockAdd);
+            if (!values) return;
             try {
                 const block = await this.request('/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '/tasks/' + task.id + '/blocks', {
                     method: 'POST',
-                    body: JSON.stringify({ content: this.blockContent })
+                    headers: { 'Idempotency-Key': window.crypto.randomUUID() },
+                    body: JSON.stringify({ content: values.content })
                 });
                 this.blockList.push(block);
-                this.blockContent = '';
                 this.noticeMessage = messages.blockAdded;
             } catch (error) { this.showError(error); }
         },
@@ -531,7 +640,7 @@ createApp({
             if (!values) return;
             try {
                 const path = '/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '/tasks/' + task.id + '/blocks/' + block.id;
-                const updatedBlock = await this.request(path, { method: 'PUT', body: JSON.stringify({ content: values.content }) });
+                const updatedBlock = await this.request(path, { method: 'PUT', headers: { 'If-Match': String(block.version) }, body: JSON.stringify({ content: values.content }) });
                 Object.assign(block, updatedBlock);
                 this.noticeMessage = messages.blockUpdated;
             } catch (error) { this.showError(error); }
@@ -539,7 +648,7 @@ createApp({
         async deleteTaskBlock(task, block) {
             if (!await this.showConfirmDialog(messages.blockDeleteConfirm, true)) return;
             try {
-                const path = '/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '/tasks/' + task.id + '/blocks/' + block.id + '?confirm=true';
+                const path = '/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '/tasks/' + task.id + '/blocks/' + block.id;
                 await this.request(path, { method: 'DELETE' });
                 this.blockList = this.blockList.filter(item => item.id !== block.id);
                 this.noticeMessage = messages.blockDeleted;
@@ -547,13 +656,16 @@ createApp({
         },
         async approveProposal(task, proposal) {
             const values = await this.showFormDialog(messages.proposalApproveTitle, [
-                { key: 'title', label: messages.memoryTitlePrompt, value: proposal.title || messages.memoryFromTask, required: true }
+                { key: 'title', label: messages.memoryTitlePrompt, value: proposal.title || messages.memoryFromTask, required: true },
+                { key: 'content', label: messages.content, value: proposal.proposedContent, multiline: true, required: true },
+                { key: 'tags', label: messages.proposalTagsPrompt, value: (proposal.tags || []).join(', ') },
+                { key: 'applicationMode', label: messages.mode, value: 'CONTEXTUAL', options: [{ value: 'CONTEXTUAL', label: messages.modeContextual }, { value: 'ALWAYS', label: messages.modeAlways }] }
             ]);
             if (!values) return;
             try {
                 await this.request('/projects/' + this.selectedProject.id + '/profiles/' + this.activeProfileId + '/tasks/' + task.id + '/proposals/' + proposal.id + '/approve', {
                     method: 'POST',
-                    body: JSON.stringify({ title: values.title.trim(), content: proposal.proposedContent, tags: proposal.tags || [], applicationMode: 'CONTEXTUAL' })
+                    body: JSON.stringify({ title: values.title.trim(), content: values.content, tags: values.tags.split(/[\n,]/).map(tag => tag.trim()).filter(Boolean), applicationMode: values.applicationMode })
                 });
                 this.proposalList = this.proposalList.filter(item => item.id !== proposal.id);
                 this.noticeMessage = messages.proposalApproved;

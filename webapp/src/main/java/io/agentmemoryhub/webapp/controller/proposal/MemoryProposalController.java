@@ -38,6 +38,12 @@ public class MemoryProposalController {
         return ResponseEntity.ok(memoryProposalService.listMemoryProposalsByTaskId(taskId, page, pageSize));
     }
 
+    @PostMapping
+    public ResponseEntity<MemoryProposalRecord> createProposal(@PathVariable String projectId, @PathVariable String profileId, @PathVariable String taskId, @RequestBody MemoryProposalInputRecord memoryProposalInputRecord, @RequestHeader(name = "Idempotency-Key", required = false) String requestId) {
+        findTaskByProjectIdAndProfileIdAndTaskId(projectId, profileId, taskId);
+        return ResponseEntity.ok(memoryProposalService.createMemoryProposalByTaskIdAndInput(taskId, memoryProposalInputRecord, requestId));
+    }
+
     @PutMapping("/{proposalId}")
     public ResponseEntity<MemoryProposalRecord> updateProposal(@PathVariable String projectId, @PathVariable String profileId, @PathVariable String taskId, @PathVariable String proposalId, @RequestBody MemoryProposalInputRecord memoryProposalInputRecord, @RequestHeader(name = "If-Match", required = false) Long expectedVersion) {
         validateProposalRelation(projectId, profileId, taskId, proposalId);
@@ -45,9 +51,9 @@ public class MemoryProposalController {
     }
 
     @DeleteMapping("/{proposalId}")
-    public ResponseEntity<Void> deleteProposal(@PathVariable String projectId, @PathVariable String profileId, @PathVariable String taskId, @PathVariable String proposalId, @RequestParam(defaultValue = "false") boolean confirm) {
+    public ResponseEntity<Void> deleteProposal(@PathVariable String projectId, @PathVariable String profileId, @PathVariable String taskId, @PathVariable String proposalId) {
         validateProposalRelation(projectId, profileId, taskId, proposalId);
-        memoryProposalService.deleteMemoryProposalById(proposalId, confirm);
+        memoryProposalService.deleteMemoryProposalById(proposalId, true);
         return ResponseEntity.noContent().build();
     }
 

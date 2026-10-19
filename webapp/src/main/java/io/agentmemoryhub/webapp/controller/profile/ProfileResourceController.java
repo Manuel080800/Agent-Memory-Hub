@@ -82,15 +82,15 @@ public class ProfileResourceController {
     }
 
     @DeleteMapping("/{resourceType}/{resourceId}")
-    public ResponseEntity<Void> deleteResource(@PathVariable String projectId, @PathVariable String profileId, @PathVariable String resourceType, @PathVariable String resourceId, @RequestParam(defaultValue = "false") boolean confirm) {
+    public ResponseEntity<Void> deleteResource(@PathVariable String projectId, @PathVariable String profileId, @PathVariable String resourceType, @PathVariable String resourceId) {
         validateProfileBelongsToProject(projectId, profileId);
         var normalizedResourceType = resourceType.toUpperCase(Locale.ROOT);
 
         switch (normalizedResourceType) {
-            case "SKILLS" -> skillService.deleteSkillByIdAndProfileId(resourceId, profileId, confirm);
-            case "WORKFLOWS" -> workflowService.deleteWorkflowByIdAndProfileId(resourceId, profileId, confirm);
-            case "MEMORIES" -> memoryService.deleteMemoryByIdAndProfileId(resourceId, profileId, confirm);
-            case "TASKS" -> deleteTaskByProfileIdAndId(profileId, resourceId, confirm);
+            case "SKILLS" -> skillService.deleteSkillByIdAndProfileId(resourceId, profileId, true);
+            case "WORKFLOWS" -> workflowService.deleteWorkflowByIdAndProfileId(resourceId, profileId, true);
+            case "MEMORIES" -> memoryService.deleteMemoryByIdAndProfileId(resourceId, profileId, true);
+            case "TASKS" -> deleteTaskByProfileIdAndId(profileId, resourceId);
             default -> throw new HubException("INVALID_ARGUMENT", "error.invalidArgument", 400, "resourceType");
         }
 
@@ -122,9 +122,9 @@ public class ProfileResourceController {
         return taskService.updateTaskById(taskId, taskInputRecord, expectedVersion);
     }
 
-    private void deleteTaskByProfileIdAndId(String profileId, String taskId, boolean confirm) {
+    private void deleteTaskByProfileIdAndId(String profileId, String taskId) {
         findTaskByProfileIdAndId(profileId, taskId);
-        taskService.deleteTaskById(taskId, confirm);
+        taskService.deleteTaskById(taskId, true);
     }
 
 }

@@ -48,14 +48,14 @@ public class UserController {
     }
 
     @DeleteMapping("/{userId}")
-    public ResponseEntity<Void> deleteUser(HttpSession httpSession, @PathVariable String userId, @RequestParam(defaultValue = "false") boolean confirm) {
+    public ResponseEntity<Void> deleteUser(HttpSession httpSession, @PathVariable String userId) {
         var authenticatedUser = webAppSessionHandler.getUser(httpSession);
 
         if (authenticatedUser.id().equals(userId)) {
             throw new HubException("OPERATION_NOT_ALLOWED", "error.operationNotAllowed", 409);
         }
 
-        userService.deleteUserById(userId, confirm);
+        userService.deleteUserById(userId, true);
         return ResponseEntity.noContent().build();
     }
 }

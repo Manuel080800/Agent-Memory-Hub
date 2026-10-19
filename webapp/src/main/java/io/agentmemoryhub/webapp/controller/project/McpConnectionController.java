@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 @RequiredArgsConstructor
@@ -42,9 +41,9 @@ public class McpConnectionController {
     }
 
     @DeleteMapping("/{connectionId}")
-    public ResponseEntity<Void> deleteConnection(@PathVariable String projectId, @PathVariable String connectionId, @RequestParam(defaultValue = "false") boolean confirm) {
+    public ResponseEntity<Void> deleteConnection(@PathVariable String projectId, @PathVariable String connectionId) {
         validateConnectionBelongsToProject(projectId, connectionId);
-        mcpConnectionService.deleteMcpConnectionById(connectionId, confirm);
+        mcpConnectionService.deleteMcpConnectionById(connectionId, true);
         return ResponseEntity.noContent().build();
     }
 

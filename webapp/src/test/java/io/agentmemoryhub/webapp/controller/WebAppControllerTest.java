@@ -12,6 +12,7 @@ import io.agentmemoryhub.core.common.PlatformRole;
 import io.agentmemoryhub.core.exception.HubException;
 import io.agentmemoryhub.core.model.record.MemoryInputRecord;
 import io.agentmemoryhub.core.model.record.MemoryProposalRecord;
+import io.agentmemoryhub.core.model.record.MemoryProposalInputRecord;
 import io.agentmemoryhub.core.model.record.McpConnectionPageRecord;
 import io.agentmemoryhub.core.model.record.McpConnectionRecord;
 import io.agentmemoryhub.core.model.record.ProfileInputRecord;
@@ -128,7 +129,7 @@ public class WebAppControllerTest {
         verify(projectService).createProjectByInput(inputCaptor.capture());
         assertEquals("user-1", inputCaptor.getValue().ownerUserId());
 
-        var exception = assertThrows(HubException.class, () -> userController.deleteUser(session, "user-1", true));
+        var exception = assertThrows(HubException.class, () -> userController.deleteUser(session, "user-1"));
         assertEquals("OPERATION_NOT_ALLOWED", exception.getCode());
         verify(userService, never()).deleteUserById("user-1", true);
     }
@@ -151,7 +152,7 @@ public class WebAppControllerTest {
         // Verifies profile changes and project settings retain route identifiers and version preconditions.
         profileController.updateProfile("project-1", "profile-1", new ProfileInputRecord(null, "Description", null), 7L);
         projectSettingsController.updateProjectSettings("project-1", new ProjectSettingsInputRecord(null, null, true, null, null, null, null, null, null), 9L);
-        projectMemberController.removeMember("project-1", "user-2", true);
+        projectMemberController.removeMember("project-1", "user-2");
 
         verify(profileService).updateProfileByIdAndProjectId("profile-1", "project-1", new ProfileInputRecord(null, "Description", null), 7L);
         verify(projectSettingsService).updateProjectSettingsByProjectId("project-1", new ProjectSettingsInputRecord(null, null, true, null, null, null, null, null, null), 9L);
@@ -164,7 +165,7 @@ public class WebAppControllerTest {
         var connectionRecord = new McpConnectionRecord("connection-2", "project-1", "Context", ConnectionType.CONTEXT, true, null, null, 0L);
         when(mcpConnectionService.listMcpConnectionsByProjectId("project-1")).thenReturn(new McpConnectionPageRecord(List.of(connectionRecord), 0, 1, 1));
 
-        var exception = assertThrows(HubException.class, () -> mcpConnectionController.deleteConnection("project-1", "connection-1", true));
+        var exception = assertThrows(HubException.class, () -> mcpConnectionController.deleteConnection("project-1", "connection-1"));
 
         assertEquals("INVALID_RELATION", exception.getCode());
         verify(mcpConnectionService, never()).deleteMcpConnectionById("connection-1", true);
@@ -186,13 +187,26 @@ public class WebAppControllerTest {
     }
 
     @Test
+    void createsMemoryProposalsOnlyForTasksInTheRequestedProfileAndProject() {
+        // Verifies proposal creation carries tags and the idempotency key after validating task ownership.
+        var proposalInputRecord = new MemoryProposalInputRecord("Proposed content", "Reason", List.of("tag-a", "tag-b"));
+        when(profileService.getProfileByIdAndProjectId("profile-1", "project-1")).thenReturn(new ProfileRecord("profile-1", "project-1", "Default", null, true, null, null, 0L));
+        when(taskService.getTaskById("task-1")).thenReturn(new TaskRecord("task-1", "profile-1", "Task", "Description", "Summary", null, null, 0L));
+        when(memoryProposalService.createMemoryProposalByTaskIdAndInput("task-1", proposalInputRecord, "request-1")).thenReturn(new MemoryProposalRecord("proposal-1", "task-1", "Proposed content", "Reason", List.of("tag-a", "tag-b"), false, null, null, null, 0L));
+
+        memoryProposalController.createProposal("project-1", "profile-1", "task-1", proposalInputRecord, "request-1");
+
+        verify(memoryProposalService).createMemoryProposalByTaskIdAndInput("task-1", proposalInputRecord, "request-1");
+    }
+
+    @Test
     void rejectsTaskBlockMutationsWhenTheBlockBelongsToAnotherTask() {
         // Verifies task blocks cannot be modified through a different task's route.
         when(profileService.getProfileByIdAndProjectId("profile-1", "project-1")).thenReturn(new ProfileRecord("profile-1", "project-1", "Default", null, true, null, null, 0L));
         when(taskService.getTaskById("task-1")).thenReturn(new TaskRecord("task-1", "profile-1", "Task", "Description", "", null, null, 0L));
         when(taskBlockService.getTaskBlockById("block-1")).thenReturn(new TaskBlockRecord("block-1", "task-2", "Content", null, null, 0L));
 
-        var exception = assertThrows(HubException.class, () -> taskBlockController.deleteTaskBlock("project-1", "profile-1", "task-1", "block-1", true));
+        var exception = assertThrows(HubException.class, () -> taskBlockController.deleteTaskBlock("project-1", "profile-1", "task-1", "block-1"));
 
         assertEquals("INVALID_RELATION", exception.getCode());
         verify(taskBlockService, never()).deleteTaskBlockById("block-1", true);
